@@ -12,6 +12,9 @@ TRACE_COLUMNS = [
     "generated_tokens",
     "token_id",
     "kv_tokens_used",
+    "kv_blocks_used",
+    "kv_blocks_free",
+    "kv_capacity_tokens",
     "notes",
 ]
 
@@ -46,6 +49,9 @@ class MockTraceWriter:
         generated_tokens: int = 0,
         token_id: int | str = "",
         kv_tokens_used: int = 0,
+        kv_blocks_used: int = 0,
+        kv_blocks_free: int = 0,
+        kv_capacity_tokens: int = 0,
         notes: str = "",
     ):
         row = {
@@ -57,6 +63,9 @@ class MockTraceWriter:
             "generated_tokens": generated_tokens,
             "token_id": token_id,
             "kv_tokens_used": kv_tokens_used,
+            "kv_blocks_used": kv_blocks_used,
+            "kv_blocks_free": kv_blocks_free,
+            "kv_capacity_tokens": kv_capacity_tokens,
             "notes": notes,
         }
         self.rows.append(row)

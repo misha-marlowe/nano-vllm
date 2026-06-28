@@ -70,6 +70,7 @@ class LLMEngine:
 
     def step(self):
         seqs, is_prefill = self.scheduler.schedule()
+        self._trace_scheduler_events()
         num_tokens = sum(seq.num_scheduled_tokens for seq in seqs) if is_prefill else -len(seqs)
         stage = "prefill" if is_prefill else "decode"
         self._trace_batch(seqs, f"{stage}_start")
@@ -130,8 +131,8 @@ class LLMEngine:
             return
         batch_size = len(seqs)
         isl = max(seq.num_prompt_tokens for seq in seqs)
-        kv_tokens = sum(len(seq) for seq in self.scheduler.running) + sum(len(seq) for seq in self.scheduler.waiting)
         for seq in seqs:
+            kv_tokens = 0 if seq.is_finished else len(seq)
             self.trace.emit(
                 self.clock.time_ms,
                 seq.seq_id,
@@ -140,6 +141,7 @@ class LLMEngine:
                 isl=isl,
                 generated_tokens=seq.num_completion_tokens,
                 kv_tokens_used=kv_tokens,
+                **self._kv_block_stats(),
             )
 
     def _trace_token_emits(
@@ -153,7 +155,17 @@ class LLMEngine:
         for seq, token_id in zip(seqs, token_ids):
             if seq.num_completion_tokens <= completion_counts[seq.seq_id]:
                 continue
-            self._trace_event(seq, "token_emit", token_id=token_id, notes="deterministic")
+            self.trace.emit(
+                self.clock.time_ms,
+                seq.seq_id,
+                "token_emit",
+                isl=seq.num_prompt_tokens,
+                generated_tokens=seq.num_completion_tokens,
+                token_id=token_id,
+                kv_tokens_used=len(seq),
+                **self._kv_block_stats(),
+                notes="deterministic",
+            )
 
     def _trace_event(
         self,
@@ -175,5 +187,30 @@ class LLMEngine:
             generated_tokens=seq.num_completion_tokens,
             token_id=token_id,
             kv_tokens_used=0 if seq.is_finished else len(seq),
+            **self._kv_block_stats(),
             notes=notes,
         )
+
+    def _trace_scheduler_events(self):
+        if not self.trace:
+            return
+        seq_by_id = {
+            seq.seq_id: seq
+            for seq in list(self.scheduler.waiting) + list(self.scheduler.running)
+        }
+        for seq_id in self.scheduler.last_waiting_seq_ids:
+            seq = seq_by_id.get(seq_id)
+            if seq:
+                self._trace_event(seq, "admission_wait", notes="insufficient_kv_blocks")
+        for seq_id in self.scheduler.last_preempted_seq_ids:
+            seq = seq_by_id.get(seq_id)
+            if seq:
+                self._trace_event(seq, "kv_preempt", notes="decode_append_block_unavailable")
+
+    def _kv_block_stats(self) -> dict[str, int]:
+        block_manager = self.scheduler.block_manager
+        return {
+            "kv_blocks_used": len(block_manager.used_block_ids),
+            "kv_blocks_free": len(block_manager.free_block_ids),
+            "kv_capacity_tokens": len(block_manager.blocks) * block_manager.block_size,
+        }

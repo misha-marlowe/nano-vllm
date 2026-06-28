@@ -47,6 +47,8 @@ def run(args):
         prefill_ms_per_token=args.prefill_ms_per_token,
         decode_base_ms=args.decode_base_ms,
         decode_ms_per_token=args.decode_ms_per_token,
+        mock_kv_capacity_tokens=args.mock_kv_capacity_tokens,
+        mock_block_size=args.mock_block_size,
     )
 
     pending = list(requests)
@@ -89,6 +91,8 @@ def main():
     parser.add_argument("--prefill-ms-per-token", type=float, default=0.01)
     parser.add_argument("--decode-base-ms", type=float, default=0.5)
     parser.add_argument("--decode-ms-per-token", type=float, default=0.02)
+    parser.add_argument("--mock-kv-capacity-tokens", type=int)
+    parser.add_argument("--mock-block-size", type=int)
     run(parser.parse_args())
 
 
