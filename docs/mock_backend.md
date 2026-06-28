@@ -211,11 +211,22 @@ prompts can reuse cached full blocks and reduce scheduled prefill tokens.
 Run:
 
 ```bash
-pytest tests/mock_backend
+python -m pytest tests/mock_backend
 ```
 
 Phase 2 tests validate KV growth, block release, admission waits under limited
 capacity, and prefix-cache reuse.
+
+On macOS, make sure the active Python is 3.10 or newer. The system
+`/usr/bin/python3` may be Python 3.9, which is too old for this package. A local
+setup that keeps CUDA-only dependencies out of the mock path is:
+
+```bash
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+python -m pytest tests/mock_backend
+```
 
 ## Phase 3: Metrics From Traces
 
