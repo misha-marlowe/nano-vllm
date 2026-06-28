@@ -216,3 +216,66 @@ pytest tests/mock_backend
 
 Phase 2 tests validate KV growth, block release, admission waits under limited
 capacity, and prefix-cache reuse.
+
+## Phase 3: Metrics From Traces
+
+Phase 3 adds a small metrics script:
+
+```bash
+python tools/mock_trace_metrics.py traces/mock_trace.csv
+```
+
+Optional per-request CSV output:
+
+```bash
+python tools/mock_trace_metrics.py traces/mock_trace.csv \
+  --csv-output traces/mock_metrics.csv
+```
+
+### Metrics
+
+Per request:
+
+- `ttft_ms`
+  - First `token_emit` time minus `request_arrival` time.
+- `mean_tbt_ms`
+  - Mean interval between consecutive `token_emit` events for the request.
+- `tpot_ms`
+  - `(last_token_emit - first_token_emit) / (output_tokens - 1)` when there are
+    at least two output tokens.
+- `queueing_delay_ms`
+  - First `prefill_start` time minus `request_arrival` time.
+- `prefill_time_ms`
+  - Sum of `prefill_end - prefill_start` durations for the request.
+- `decode_time_ms`
+  - Sum of `decode_end - decode_start` durations for the request.
+- `output_tokens`
+  - Number of `token_emit` events.
+
+Summary:
+
+- `num_requests`
+- `output_tokens`
+- `mean_tbt_ms`
+- `p50_tbt_ms`
+- `p95_tbt_ms`
+- `throughput_tokens_per_sec`
+- `avg_batch_size`
+- `max_kv_tokens_used`
+
+Throughput uses virtual time:
+
+```text
+output_tokens / ((max_trace_time - first_arrival_time) / 1000)
+```
+
+### Validation
+
+Phase 3 tests generate a single-request colocated trace and compare metrics to
+closed-form expectations:
+
+```text
+prefill = 1.0 + 128 * 0.01 = 2.28 ms
+decode = 0.5 + 0.02 = 0.52 ms
+total = 2.28 + 8 * 0.52 = 6.44 ms
+```
