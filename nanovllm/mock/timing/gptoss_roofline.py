@@ -299,6 +299,7 @@ class GPTOSSRooflineTimingBackend:
         self.config = config
         self.model = GPTOSS
         self.arch = ARCHES[config.roofline_gpu_arch]
+        self._afd_stage_cache: dict[tuple[int, int, str, int, float], AFDStageDurations] = {}
 
     @property
     def backend(self) -> str:
@@ -318,6 +319,15 @@ class GPTOSSRooflineTimingBackend:
         ) * 1e3
 
     def afd_decode_stages_ms(self, microbatch_size: int, context_len: int) -> AFDStageDurations:
+        cache_key = (
+            microbatch_size,
+            context_len,
+            self.backend,
+            self.config.roofline_tp_g,
+            self.config.gpu_cs_link_us,
+        )
+        if cache_key in self._afd_stage_cache:
+            return self._afd_stage_cache[cache_key]
         old_link = CS4M.CLOS_LAT_US
         CS4M.CLOS_LAT_US = self.config.gpu_cs_link_us
         try:
@@ -331,7 +341,7 @@ class GPTOSSRooflineTimingBackend:
             )
         finally:
             CS4M.CLOS_LAT_US = old_link
-        return AFDStageDurations(
+        durations = AFDStageDurations(
             attention_ms=attention_s * 1e3,
             gpu_to_cs_link_ms=link_s * 1e3,
             cs_rest_ms=cs_rest_s * 1e3,
@@ -343,3 +353,5 @@ class GPTOSSRooflineTimingBackend:
                 f"link_us={self.config.gpu_cs_link_us}"
             ),
         )
+        self._afd_stage_cache[cache_key] = durations
+        return durations

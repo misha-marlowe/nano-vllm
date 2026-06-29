@@ -60,6 +60,8 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
     for row in rows:
         points.append((float(row["direct_interactivity"]), float(row["direct_tok_s_per_gpu"])))
         points.append((float(row["des_interactivity"]), float(row["des_tok_s_per_gpu"])))
+        if row.get("mock_interactivity") not in ("", None) and row.get("mock_tok_s_per_gpu") not in ("", None):
+            points.append((float(row["mock_interactivity"]), float(row["mock_tok_s_per_gpu"])))
     min_x = min(x for x, _ in points)
     max_x = max(x for x, _ in points)
     min_y = 0.0
@@ -82,7 +84,7 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
     }
     body = []
     body.append(f'<rect width="100%" height="100%" fill="white"/>')
-    body.append(f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs DES replay</text>')
+    body.append(f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs nano-vLLM mock vs DES replay</text>')
     body.append(panel_axes(left_x0, y0, panel_w, plot_h, "Analytical Pareto"))
     body.append(panel_axes(right_x0, y0, panel_w, plot_h, "DES replay of analytical configs"))
 
@@ -114,6 +116,21 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
             body.append(f'<polyline points="{des_points}" fill="none" stroke="{color}" stroke-width="2.2"/>')
             for p in des_frontier:
                 body.append(circle(sx(right_x0, p["x"]), sy(p["y"]), color, 3.2, 0.95))
+        mock_frontier = pareto_uplr([
+            {
+                "x": float(row["mock_interactivity"]),
+                "y": float(row["mock_tok_s_per_gpu"]),
+                "row": row,
+            }
+            for row in des_group
+            if row.get("mock_interactivity") not in ("", None)
+            and row.get("mock_tok_s_per_gpu") not in ("", None)
+        ])
+        mock_points = " ".join(f'{sx(right_x0, p["x"]):.2f},{sy(p["y"]):.2f}' for p in mock_frontier)
+        if mock_points:
+            body.append(f'<polyline points="{mock_points}" fill="none" stroke="{color}" stroke-width="1.8" stroke-dasharray="8 4"/>')
+            for p in mock_frontier:
+                body.append(open_square(sx(right_x0, p["x"]), sy(p["y"]), color, 3.0))
 
     legend_x = width - 184
     for idx, link_us in enumerate(sorted(colors)):
@@ -123,7 +140,7 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
 
     body.append(f'<text x="{width / 2:.0f}" y="{height - 18}" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>')
     body.append(f'<text x="18" y="{height / 2:.0f}" text-anchor="middle" transform="rotate(-90 18 {height / 2:.0f})" font-family="sans-serif" font-size="13">output tok/s/GPU</text>')
-    body.append(f'<text x="{right_x0 + panel_w / 2:.0f}" y="{height - 38}" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">line = non-dominated DES subset of replayed analytical configs</text>')
+    body.append(f'<text x="{right_x0 + panel_w / 2:.0f}" y="{height - 38}" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: solid circles=DES, dashed squares=nano-vLLM mock</text>')
     path.write_text(
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">\n'
         + "\n".join(body)
@@ -162,7 +179,17 @@ def write_link_overlay_svg(
         }
         for row in group
     ]
+    afd_mock_all = [
+        {
+            "x": float(row["mock_interactivity"]),
+            "y": float(row["mock_tok_s_per_gpu"]),
+        }
+        for row in group
+        if row.get("mock_interactivity") not in ("", None)
+        and row.get("mock_tok_s_per_gpu") not in ("", None)
+    ]
     afd_des_frontier = pareto_uplr(afd_des_all)
+    afd_mock_frontier = pareto_uplr(afd_mock_all) if afd_mock_all else []
     colocated_direct = colocated_curve(colocated_rows, "direct")
     colocated_des = colocated_curve(colocated_rows, "des")
 
@@ -170,7 +197,7 @@ def write_link_overlay_svg(
     pad_left, pad_right, pad_top, pad_bottom = 82, 34, 58, 72
     plot_w = width - pad_left - pad_right
     plot_h = height - pad_top - pad_bottom
-    all_points = afd_direct + afd_des_all + colocated_direct + colocated_des
+    all_points = afd_direct + afd_des_all + afd_mock_all + colocated_direct + colocated_des
     min_x = min(point["x"] for point in all_points)
     max_x = max(point["x"] for point in all_points)
     min_y = 0.0
@@ -194,7 +221,7 @@ def write_link_overlay_svg(
 
     body = [
         '<rect width="100%" height="100%" fill="white"/>',
-        f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL={format_int(isl)}, link={link_us:.0f}us: colocated and AFD analytical vs DES</text>',
+        f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL={format_int(isl)}, link={link_us:.0f}us: colocated + AFD analytical/mock/DES</text>',
         f'<line x1="{pad_left}" y1="{pad_top + plot_h}" x2="{pad_left + plot_w}" y2="{pad_top + plot_h}" stroke="#111827"/>',
         f'<line x1="{pad_left}" y1="{pad_top}" x2="{pad_left}" y2="{pad_top + plot_h}" stroke="#111827"/>',
     ]
@@ -215,6 +242,10 @@ def write_link_overlay_svg(
     body.append(polyline(afd_direct, "#2563eb"))
     for point in afd_direct:
         body.append(circle(sx(point["x"]), sy(point["y"]), "#2563eb", 3.2, 0.9))
+    if afd_mock_frontier:
+        body.append(polyline(afd_mock_frontier, "#2563eb", "8 4"))
+        for point in afd_mock_frontier:
+            body.append(open_square(sx(point["x"]), sy(point["y"]), "#2563eb", 4.0))
     body.append(polyline(afd_des_frontier, "#2563eb", "2 5"))
     for point in afd_des_frontier:
         body.append(circle(sx(point["x"]), sy(point["y"]), "#2563eb", 3.4, 0.95))
@@ -229,11 +260,14 @@ def write_link_overlay_svg(
         f'<text x="{legend_x + 40}" y="{legend_y + 4}" font-family="sans-serif" font-size="12">AFD analytical</text>',
         f'<line x1="{legend_x}" y1="{legend_y + 22}" x2="{legend_x + 30}" y2="{legend_y + 22}" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="2 5"/>',
         f'<text x="{legend_x + 40}" y="{legend_y + 26}" font-family="sans-serif" font-size="12">AFD DES</text>',
-        f'<line x1="{legend_x}" y1="{legend_y + 44}" x2="{legend_x + 30}" y2="{legend_y + 44}" stroke="#111827" stroke-width="2.6"/>',
-        f'<text x="{legend_x + 40}" y="{legend_y + 48}" font-family="sans-serif" font-size="12">colocated analytical</text>',
-        f'<line x1="{legend_x}" y1="{legend_y + 66}" x2="{legend_x + 30}" y2="{legend_y + 66}" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>',
-        f'<circle cx="{legend_x + 15}" cy="{legend_y + 66}" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>',
-        f'<text x="{legend_x + 40}" y="{legend_y + 70}" font-family="sans-serif" font-size="12">colocated DES</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 44}" x2="{legend_x + 30}" y2="{legend_y + 44}" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="8 4"/>',
+        f'<rect x="{legend_x + 11}" y="{legend_y + 40}" width="8" height="8" fill="white" stroke="#2563eb" stroke-width="1.5"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 48}" font-family="sans-serif" font-size="12">AFD nano-vLLM mock</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 66}" x2="{legend_x + 30}" y2="{legend_y + 66}" stroke="#111827" stroke-width="2.6"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 70}" font-family="sans-serif" font-size="12">colocated analytical</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 88}" x2="{legend_x + 30}" y2="{legend_y + 88}" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>',
+        f'<circle cx="{legend_x + 15}" cy="{legend_y + 88}" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 92}" font-family="sans-serif" font-size="12">colocated DES</text>',
         f'<text x="{width / 2:.0f}" y="{height - 20}" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>',
         f'<text x="18" y="{height / 2:.0f}" text-anchor="middle" transform="rotate(-90 18 {height / 2:.0f})" font-family="sans-serif" font-size="13">output tok/s/GPU</text>',
     ])
@@ -352,6 +386,11 @@ def open_circle(x: float, y: float, color: str, r: float) -> str:
     return f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{r:.1f}" fill="white" stroke="{color}" stroke-width="1.5"/>'
 
 
+def open_square(x: float, y: float, color: str, r: float) -> str:
+    side = 2 * r
+    return f'<rect x="{x - r:.2f}" y="{y - r:.2f}" width="{side:.1f}" height="{side:.1f}" fill="white" stroke="{color}" stroke-width="1.5"/>'
+
+
 def fmt(value, digits: int) -> str:
     return f"{float(value):.{digits}f}"
 
@@ -391,6 +430,7 @@ def run_mock_point(point: dict, args) -> tuple[float, float, float]:
         max_num_batched_tokens=max(gb * (isl + 1), 1),
         max_model_len=isl + 2,
         mock_kv_capacity_tokens=gb * (isl + 1 + 256),
+        mock_block_size=isl + 2,
         prefill_base_ms=0.0,
         prefill_ms_per_token=0.0,
         pipeline_mode="discrete_pipeline",
@@ -405,7 +445,7 @@ def run_mock_point(point: dict, args) -> tuple[float, float, float]:
         gpu_cs_link_us=float(point["link_us"]),
     )
     params = SamplingParams(max_tokens=1, ignore_eos=True)
-    prompt = list(range(isl))
+    prompt = range(isl)
     for _ in range(gb):
         llm.add_request(prompt, params)
     while not llm.is_finished():

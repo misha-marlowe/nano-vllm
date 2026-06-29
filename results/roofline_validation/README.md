@@ -11,9 +11,9 @@ backend and the AFD serving simulators.
 - **DES**: the standalone discrete-event simulator with scalar request/KV state
   and explicit resources.
 
-For large-context plots, DES is used without nano-vLLM mock because the mock
-path materializes prompt token arrays, while DES stores ISL and KV usage as
-scalar counts.
+For large-context AFD plots, nano-vLLM mock uses compact synthetic prompts and
+coarse mock blocks so the engine/scheduler path can be replayed without
+materializing giant prompt-token arrays.
 
 ## Key Plots
 
@@ -34,7 +34,7 @@ All-link AFD replay comparison at 8K ISL:
 - `afd_pareto_sim/afd_analytical_des_comparison.csv`
   - 8K ISL AFD analytical, nano-vLLM mock, and DES replay rows.
 - `afd_pareto_1m/afd_analytical_des_comparison.csv`
-  - 1M ISL AFD analytical and DES replay rows.
+  - 1M ISL AFD analytical, nano-vLLM mock, and DES replay rows.
 - `afd_pareto_1m/isl1000000_colocated_analytical_des.csv`
   - 1M ISL colocated analytical and DES rows.
 
@@ -78,6 +78,5 @@ python tools/validate_afd_pareto.py \
 python tools/validate_afd_pareto.py \
   --isl 1000000 \
   --link-us 12 \
-  --skip-mock \
   --output-dir results/roofline_validation/afd_pareto_1m
 ```

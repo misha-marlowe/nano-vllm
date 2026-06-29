@@ -31,8 +31,8 @@ It includes:
   derived from the [original analytical model](docs/perf_model.pdf).
 - **Metrics and workload tools**: trace metrics, synthetic workload generation,
   and SVG/CSV result artifacts.
-- **Validation plots**: reproduced 8K and 1M ISL analytical-vs-DES comparison
-  plots under `results/roofline_validation/`.
+- **Validation plots**: reproduced 8K and 1M ISL analytical / nano-vLLM mock /
+  DES comparison plots under `results/roofline_validation/`.
 
 The original GPU inference path is still present; the mock/DES additions are
 for learning, validation, and performance-model exploration.
@@ -320,7 +320,6 @@ Reproduce the 1M ISL comparison:
 python tools/validate_afd_pareto.py \
   --isl 1000000 \
   --link-us 12 \
-  --skip-mock \
   --output-dir results/roofline_validation/afd_pareto_1m
 ```
 

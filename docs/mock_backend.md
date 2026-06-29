@@ -727,15 +727,15 @@ python tools/validate_afd_pareto.py \
   --output-dir results/roofline_validation/afd_pareto_sim
 ```
 
-For large-context plots, skip the in-engine nano-vLLM mock replay so the
-validator does not allocate giant prompt-token arrays. This still compares the
-analytical closed-form points against standalone DES replay:
+For large-context AFD plots, the validator keeps the in-engine nano-vLLM mock
+replay enabled by using compact synthetic prompts and a coarse mock block size.
+That preserves the engine/scheduler lifecycle without allocating giant
+prompt-token arrays:
 
 ```bash
 python tools/validate_afd_pareto.py \
   --isl 1000000 \
   --link-us 12 \
-  --skip-mock \
   --output-dir results/roofline_validation/afd_pareto_1m
 ```
 

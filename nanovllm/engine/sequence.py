@@ -5,6 +5,36 @@ from itertools import count
 from nanovllm.sampling_params import SamplingParams
 
 
+class CompactTokenIds:
+    """Token container for very long synthetic mock prompts.
+
+    The normal engine path keeps Python lists of token IDs because real prompts
+    are modest and block hashing needs list slices. Long-context mock Pareto
+    replays can use a ``range`` prompt instead; this wrapper keeps the prompt
+    compact while still supporting the small list-like surface the scheduler and
+    block manager use.
+    """
+
+    def __init__(self, prompt_range: range):
+        self.prompt_range = prompt_range
+        self.completion_ids: list[int] = []
+
+    def __len__(self):
+        return len(self.prompt_range) + len(self.completion_ids)
+
+    def __getitem__(self, key):
+        if isinstance(key, slice):
+            return [self[i] for i in range(*key.indices(len(self)))]
+        if key < 0:
+            key += len(self)
+        if key < len(self.prompt_range):
+            return self.prompt_range[key]
+        return self.completion_ids[key - len(self.prompt_range)]
+
+    def append(self, token_id: int):
+        self.completion_ids.append(token_id)
+
+
 class SequenceStatus(Enum):
     WAITING = auto()
     RUNNING = auto()
@@ -15,10 +45,10 @@ class Sequence:
     block_size = 256
     counter = count()
 
-    def __init__(self, token_ids: list[int], sampling_params = SamplingParams()):
+    def __init__(self, token_ids: list[int] | range, sampling_params = SamplingParams()):
         self.seq_id = next(Sequence.counter)
         self.status = SequenceStatus.WAITING
-        self.token_ids = copy(token_ids)
+        self.token_ids = CompactTokenIds(token_ids) if isinstance(token_ids, range) else copy(token_ids)
         self.last_token = token_ids[-1]
         self.num_tokens = len(self.token_ids)
         self.num_prompt_tokens = len(token_ids)
