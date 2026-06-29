@@ -467,6 +467,34 @@ batch_size=18, microbatch_size=8 -> [8, 8, 2]
 
 Stage costs are evaluated against each actual microbatch size.
 
+### Multi-Resource Stages
+
+The discrete pipeline mode can model multiple resources per stage:
+
+```bash
+--attention-replicas 2
+--gpu-to-cs-link-resources 1
+--cs-rest-resources 1
+--cs-to-gpu-link-resources 1
+```
+
+This supports the common AFD sketch:
+
+```text
+attention_replica_0 \
+                     -> shared CS rest
+attention_replica_1 /
+```
+
+Resource IDs are written into trace notes for discrete pipeline stage events:
+
+```text
+microbatch=2;microbatch_size=4;resource=decode_attention_0
+```
+
+The default is still one resource per stage, matching the original Phase 5
+behavior.
+
 ### Ideal Pipeline Formula
 
 For uniform or non-uniform microbatches, the implementation computes:

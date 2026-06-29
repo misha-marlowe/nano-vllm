@@ -9,6 +9,8 @@ StageCostFn = Callable[[int], float]
 class PipelineStage:
     name: str
     cost_ms: StageCostFn
+    resources: int = 1
+    routing: str = "earliest_available"
 
 
 @dataclass(frozen=True)
@@ -16,6 +18,7 @@ class PipelineEvent:
     microbatch_id: int
     microbatch_size: int
     stage: str
+    resource_id: int
     start_ms: float
     end_ms: float
 
@@ -32,9 +35,9 @@ def simulate_discrete_pipeline(
 ) -> PipelineSimulationResult:
     """Simulate an in-order resource pipeline for small microbatch counts.
 
-    Each stage has one resource. Microbatch j can enter stage i only after:
+    Each stage has one or more resources. Microbatch j can enter stage i only after:
     - microbatch j has completed stage i - 1, and
-    - stage i has finished microbatch j - 1.
+    - the selected stage-i resource is available.
 
     This is intentionally a conservative event-level reference for small M. It
     does not assume cross-layer steady state or amortized fill/drain bubbles.
@@ -47,7 +50,13 @@ def simulate_discrete_pipeline(
     if any(size <= 0 for size in microbatch_sizes):
         raise ValueError("microbatch sizes must be positive")
 
-    stage_available_ms = [0.0] * len(stages)
+    for stage in stages:
+        if stage.resources <= 0:
+            raise ValueError(f"stage {stage.name} must have at least one resource")
+        if stage.routing not in ("earliest_available", "round_robin", "partitioned"):
+            raise ValueError(f"unsupported routing policy {stage.routing}")
+
+    stage_available_ms = [[0.0] * stage.resources for stage in stages]
     events: list[PipelineEvent] = []
 
     for microbatch_id, microbatch_size in enumerate(microbatch_sizes):
@@ -56,22 +65,30 @@ def simulate_discrete_pipeline(
             cost_ms = stage.cost_ms(microbatch_size)
             if cost_ms < 0:
                 raise ValueError(f"stage {stage.name} returned negative cost")
-            start_ms = max(ready_ms, stage_available_ms[stage_idx])
+            resource_id = _select_resource(stage, stage_available_ms[stage_idx], microbatch_id)
+            start_ms = max(ready_ms, stage_available_ms[stage_idx][resource_id])
             end_ms = start_ms + cost_ms
             events.append(PipelineEvent(
                 microbatch_id=microbatch_id,
                 microbatch_size=microbatch_size,
                 stage=stage.name,
+                resource_id=resource_id,
                 start_ms=start_ms,
                 end_ms=end_ms,
             ))
             ready_ms = end_ms
-            stage_available_ms[stage_idx] = end_ms
+            stage_available_ms[stage_idx][resource_id] = end_ms
 
     return PipelineSimulationResult(
-        total_ms=max(stage_available_ms),
+        total_ms=max(max(resources) for resources in stage_available_ms),
         events=events,
     )
+
+
+def _select_resource(stage: PipelineStage, available_ms: list[float], microbatch_id: int) -> int:
+    if stage.routing in ("round_robin", "partitioned"):
+        return microbatch_id % stage.resources
+    return min(range(stage.resources), key=lambda idx: (available_ms[idx], idx))
 
 
 def uniform_steady_state_formula_ms(

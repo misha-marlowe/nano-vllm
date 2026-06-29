@@ -95,3 +95,28 @@ def test_discrete_pipeline_converges_toward_bottleneck_throughput():
     assert large == pytest.approx((4.0 + 127 * 2.0) / 128)
     assert large < small
     assert large == pytest.approx(2.0, abs=0.02)
+
+
+def test_multi_resource_attention_feeds_shared_cs():
+    stages = [
+        PipelineStage("attention", lambda _mb: 4.0, resources=2, routing="round_robin"),
+        PipelineStage("cs_rest", lambda _mb: 1.0, resources=1),
+    ]
+
+    result = simulate_discrete_pipeline(stages, [1, 1, 1, 1])
+    attention_events = [event for event in result.events if event.stage == "attention"]
+    cs_events = [event for event in result.events if event.stage == "cs_rest"]
+
+    assert [(event.resource_id, event.start_ms, event.end_ms) for event in attention_events] == [
+        (0, 0.0, 4.0),
+        (1, 0.0, 4.0),
+        (0, 4.0, 8.0),
+        (1, 4.0, 8.0),
+    ]
+    assert [(event.start_ms, event.end_ms) for event in cs_events] == [
+        (4.0, 5.0),
+        (5.0, 6.0),
+        (8.0, 9.0),
+        (9.0, 10.0),
+    ]
+    assert result.total_ms == pytest.approx(10.0)

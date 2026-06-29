@@ -37,6 +37,10 @@ class Config:
     num_layers: int = 32
     pipeline_mode: str = "sequential"
     microbatch_size: int = 1
+    attention_replicas: int = 1
+    gpu_to_cs_link_resources: int = 1
+    cs_rest_resources: int = 1
+    cs_to_gpu_link_resources: int = 1
 
     def __post_init__(self):
         if self.mock_backend:
@@ -48,6 +52,10 @@ class Config:
             assert self.pipeline_mode in ("sequential", "ideal_pipeline", "discrete_pipeline")
             assert self.num_layers > 0
             assert self.microbatch_size > 0
+            assert self.attention_replicas > 0
+            assert self.gpu_to_cs_link_resources > 0
+            assert self.cs_rest_resources > 0
+            assert self.cs_to_gpu_link_resources > 0
             if self.mock_kv_capacity_tokens is not None:
                 self.num_kvcache_blocks = max(1, ceil(self.mock_kv_capacity_tokens / self.kvcache_block_size))
             elif self.num_kvcache_blocks == -1:

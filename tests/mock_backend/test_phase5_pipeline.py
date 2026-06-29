@@ -117,3 +117,34 @@ def test_link_latency_affects_single_round_trip_more_than_steady_state(tmp_path)
 
     assert steady_state_delta == pytest.approx(1.0 / 32.0)
     assert single_delta == pytest.approx(1.0)
+
+
+def test_discrete_pipeline_attention_replicas_reduce_attention_bottleneck(tmp_path):
+    reset_sequence_ids()
+    one_replica = make_afd_pipeline(
+        tmp_path / "one_replica.csv",
+        pipeline_mode="discrete_pipeline",
+        num_requests=4,
+        attention_ms_per_token=4.0,
+        cs_rest_ms_per_token=1.0,
+        link_ms_one_way=0.0,
+    )
+    reset_sequence_ids()
+    two_replicas = make_afd_pipeline(
+        tmp_path / "two_replicas.csv",
+        pipeline_mode="discrete_pipeline",
+        num_requests=4,
+        attention_ms_per_token=4.0,
+        cs_rest_ms_per_token=1.0,
+        link_ms_one_way=0.0,
+        attention_replicas=2,
+    )
+
+    assert first_decode_duration(one_replica) == pytest.approx(17.0)
+    assert first_decode_duration(two_replicas) == pytest.approx(10.0)
+    attention_starts = [
+        row for row in two_replicas
+        if row["stage"] == "decode_attention_start" and row["request_id"] == "0"
+    ]
+    notes = {row["notes"] for row in attention_starts}
+    assert any("resource=decode_attention_0" in note for note in notes)

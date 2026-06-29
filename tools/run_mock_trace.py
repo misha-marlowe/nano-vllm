@@ -58,6 +58,10 @@ def run(args):
         num_layers=args.num_layers,
         pipeline_mode=args.pipeline_mode,
         microbatch_size=args.microbatch_size,
+        attention_replicas=args.attention_replicas,
+        gpu_to_cs_link_resources=args.gpu_to_cs_link_resources,
+        cs_rest_resources=args.cs_rest_resources,
+        cs_to_gpu_link_resources=args.cs_to_gpu_link_resources,
     )
 
     pending = list(requests)
@@ -111,6 +115,10 @@ def main():
     parser.add_argument("--num-layers", type=int, default=32)
     parser.add_argument("--pipeline-mode", choices=["sequential", "ideal_pipeline", "discrete_pipeline"], default="sequential")
     parser.add_argument("--microbatch-size", type=int, default=1)
+    parser.add_argument("--attention-replicas", type=int, default=1)
+    parser.add_argument("--gpu-to-cs-link-resources", type=int, default=1)
+    parser.add_argument("--cs-rest-resources", type=int, default=1)
+    parser.add_argument("--cs-to-gpu-link-resources", type=int, default=1)
     run(parser.parse_args())
 
 

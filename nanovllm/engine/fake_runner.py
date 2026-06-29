@@ -87,10 +87,27 @@ class FakeAFDRunner(FakeColocatedRunner):
 
     def _stage_defs(self, context_len: int) -> list[PipelineStage]:
         return [
-            PipelineStage("decode_attention", lambda mb: self._attention_ms(mb, context_len)),
-            PipelineStage("gpu_to_cs_link", lambda _mb: self.config.link_ms_one_way),
-            PipelineStage("cs_rest", self._cs_rest_ms),
-            PipelineStage("cs_to_gpu_link", lambda _mb: self.config.link_ms_one_way),
+            PipelineStage(
+                "decode_attention",
+                lambda mb: self._attention_ms(mb, context_len),
+                resources=self.config.attention_replicas,
+                routing="round_robin",
+            ),
+            PipelineStage(
+                "gpu_to_cs_link",
+                lambda _mb: self.config.link_ms_one_way,
+                resources=self.config.gpu_to_cs_link_resources,
+            ),
+            PipelineStage(
+                "cs_rest",
+                self._cs_rest_ms,
+                resources=self.config.cs_rest_resources,
+            ),
+            PipelineStage(
+                "cs_to_gpu_link",
+                lambda _mb: self.config.link_ms_one_way,
+                resources=self.config.cs_to_gpu_link_resources,
+            ),
         ]
 
     def _run_sequential_decode(self, seqs: list[Sequence]):
@@ -114,7 +131,11 @@ class FakeAFDRunner(FakeColocatedRunner):
         microbatch_sizes = split_into_microbatches(len(seqs), self.config.microbatch_size)
         result = simulate_discrete_pipeline(self._stage_defs(context_len), microbatch_sizes)
         for event in result.events:
-            notes = f"microbatch={event.microbatch_id};microbatch_size={event.microbatch_size}"
+            notes = (
+                f"microbatch={event.microbatch_id};"
+                f"microbatch_size={event.microbatch_size};"
+                f"resource={event.stage}_{event.resource_id}"
+            )
             self.last_stage_events.append(RunnerStageEvent(
                 f"{event.stage}_start",
                 event.start_ms,
