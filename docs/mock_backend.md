@@ -645,9 +645,10 @@ decode  = decode_base_ms + decode_ms_per_token * batch_size
 AFD     = attention + GPU->CS link + CS rest + CS->GPU link
 ```
 
-`timing_backend="gptoss_roofline"` adapts the GPT-OSS-120B decode model from
-AC_PerfModel into the same mock runner contract. It is decode-focused: prefill
-still uses the parametric formula until a prefill roofline model is supplied.
+`timing_backend="gptoss_roofline"` adapts the GPT-OSS-120B decode equations
+from the [original analytical model](perf_model.pdf) into the same mock runner
+contract. It is decode-focused: prefill still uses the parametric formula until
+a prefill roofline model is supplied.
 The backend models GPU-only decode for colocated mode and GPU FMHA attention,
 GPU↔CS-4 link, and CS-4 non-attention stages for AFD mode.
 

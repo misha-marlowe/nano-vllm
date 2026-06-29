@@ -28,7 +28,7 @@ It includes:
   link, CS, queueing, replicas, finite microbatch effects, and large-context
   replay.
 - **Timing backends**: simple parametric timing plus a GPT-OSS roofline adapter
-  derived from the AC_PerfModel code.
+  derived from the [original analytical model](docs/perf_model.pdf).
 - **Metrics and workload tools**: trace metrics, synthetic workload generation,
   and SVG/CSV result artifacts.
 - **Validation plots**: reproduced 8K and 1M ISL analytical-vs-DES comparison
@@ -200,9 +200,10 @@ TTFT, TBT, throughput, KV usage, and batch size.
 
 The default timing backend is `parametric`, which preserves the original mock
 latency formulas. For GPT-OSS-120B decode studies, use
-`--timing-backend gptoss_roofline`. It maps the vendored AC_PerfModel decode
-model onto the same mock stages: GPU-only decode for colocated mode, and GPU
-attention / GPU↔CS link / CS rest for AFD mode. Prefill remains parametric.
+`--timing-backend gptoss_roofline`. It maps the
+[original analytical model](docs/perf_model.pdf) decode equations onto the
+same mock stages: GPU-only decode for colocated mode, and GPU attention /
+GPU↔CS link / CS rest for AFD mode. Prefill remains parametric.
 
 ```bash
 python tools/run_mock_trace.py \

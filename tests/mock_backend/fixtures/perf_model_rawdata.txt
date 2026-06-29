@@ -1,4 +1,4 @@
-Raw data behind the two Pareto figures in perf_model.pdf (GPT-OSS-120B decode, AMD MI455X measured + CS-4).
+Raw data behind the two Pareto figures in docs/perf_model.pdf, the original analytical model for GPT-OSS-120B decode on AMD MI455X measured + CS-4.
 Generated from perf_model.py (backend='measured'); frontiers = pm.pareto_uplr (non-dominated on interactivity & metric).
 x = interactivity (tok/s/user). Hybrid config = tp_g (GPUs/group) x a_g (groups) : two CS-4 wafers, chunk ck, global batch gb.
 ====================================================================================================

@@ -287,7 +287,7 @@ def pareto_uplr(points: list[dict], ykey: str = "y") -> list[dict]:
 
 
 class GPTOSSRooflineTimingBackend:
-    """GPT-OSS-120B decode timing backend adapted from AC_PerfModel.
+    """GPT-OSS-120B decode timing backend adapted from the original analytical model.
 
     The backend is decode-focused. Prefill intentionally remains on the
     parametric mock formula until a prefill roofline model is supplied.
