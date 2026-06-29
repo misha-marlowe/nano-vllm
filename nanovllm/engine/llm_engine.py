@@ -203,18 +203,31 @@ class LLMEngine:
         base_time = self.clock.time_ms
         for stage_event in stage_events:
             event_time = base_time + stage_event.start_ms
-            for seq in seqs:
-                self.trace.emit(
-                    event_time,
-                    seq.seq_id,
-                    stage_event.stage,
-                    batch_size=batch_size,
-                    isl=isl,
-                    generated_tokens=seq.num_completion_tokens,
-                    kv_tokens_used=0 if seq.is_finished else len(seq),
-                    **self._kv_block_stats(),
-                    notes=stage_event.notes,
-                )
+            metadata = self._parse_stage_notes(stage_event.notes)
+            self.trace.emit(
+                event_time,
+                "",
+                stage_event.stage,
+                event_scope="resource",
+                microbatch_id=metadata.get("microbatch", ""),
+                resource=metadata.get("resource", ""),
+                batch_size=batch_size,
+                isl=isl,
+                generated_tokens=sum(seq.num_completion_tokens for seq in seqs),
+                kv_tokens_used=sum(0 if seq.is_finished else len(seq) for seq in seqs),
+                **self._kv_block_stats(),
+                notes=stage_event.notes,
+            )
+
+    @staticmethod
+    def _parse_stage_notes(notes: str) -> dict[str, str]:
+        metadata = {}
+        for item in notes.split(";"):
+            if "=" not in item:
+                continue
+            key, value = item.split("=", 1)
+            metadata[key] = value
+        return metadata
 
     def _trace_scheduler_events(self):
         if not self.trace:

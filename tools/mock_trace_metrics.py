@@ -45,7 +45,7 @@ def compute_metrics(rows: list[dict[str, str]]) -> tuple[list[dict[str, float | 
     by_request: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in rows:
         request_id = row.get("request_id", "")
-        if request_id != "":
+        if request_id != "" and row.get("event_scope", "request") == "request":
             by_request[request_id].append(row)
 
     request_metrics: list[dict[str, float | int | str]] = []

@@ -174,9 +174,9 @@ The CLI exposes these as:
 Trace rows include:
 
 ```text
-virtual_time_ms, request_id, stage, batch_size, isl, generated_tokens,
-token_id, kv_tokens_used, kv_blocks_used, kv_blocks_free,
-kv_capacity_tokens, notes
+virtual_time_ms, request_id, event_scope, microbatch_id, resource, stage,
+batch_size, isl, generated_tokens, token_id, kv_tokens_used, kv_blocks_used,
+kv_blocks_free, kv_capacity_tokens, notes
 ```
 
 `kv_tokens_used` is per-request for normal request events. It is `0` on
@@ -491,6 +491,11 @@ Resource IDs are written into trace notes for discrete pipeline stage events:
 ```text
 microbatch=2;microbatch_size=4;resource=decode_attention_0
 ```
+
+Discrete pipeline stage rows are resource-scoped, not request-scoped. They are
+emitted once per actual microbatch/resource event with `request_id=""` and
+`event_scope="resource"`. Request lifecycle rows such as `token_emit` remain
+request-scoped. This avoids multiplying large-batch traces by batch size.
 
 The default is still one resource per stage, matching the original Phase 5
 behavior.

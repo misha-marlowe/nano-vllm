@@ -76,7 +76,7 @@ def test_discrete_pipeline_matches_small_m_event_reference(tmp_path):
     reset_sequence_ids()
     rows = make_afd_pipeline(tmp_path / "discrete.csv", pipeline_mode="discrete_pipeline", num_requests=4)
     decode_duration = first_decode_duration(rows)
-    cs_starts = [row for row in rows if row["stage"] == "cs_rest_start" and row["request_id"] == "0"]
+    cs_starts = [row for row in rows if row["stage"] == "cs_rest_start"]
 
     assert decode_duration == pytest.approx(10.0)
     assert any("microbatch=0" in row["notes"] for row in cs_starts)
@@ -142,9 +142,19 @@ def test_discrete_pipeline_attention_replicas_reduce_attention_bottleneck(tmp_pa
 
     assert first_decode_duration(one_replica) == pytest.approx(17.0)
     assert first_decode_duration(two_replicas) == pytest.approx(10.0)
-    attention_starts = [
-        row for row in two_replicas
-        if row["stage"] == "decode_attention_start" and row["request_id"] == "0"
-    ]
+    attention_starts = [row for row in two_replicas if row["stage"] == "decode_attention_start"]
     notes = {row["notes"] for row in attention_starts}
     assert any("resource=decode_attention_0" in note for note in notes)
+    assert all(row["event_scope"] == "resource" for row in attention_starts)
+
+
+def test_discrete_pipeline_stage_trace_is_not_duplicated_per_request(tmp_path):
+    reset_sequence_ids()
+    rows = make_afd_pipeline(tmp_path / "dedup.csv", pipeline_mode="discrete_pipeline", num_requests=4)
+    resource_rows = [row for row in rows if row["event_scope"] == "resource"]
+    request_rows = [row for row in rows if row["event_scope"] == "request"]
+
+    # One decode step: 4 microbatches * 4 stages * start/end rows = 32.
+    assert len(resource_rows) == 32
+    assert {row["request_id"] for row in resource_rows} == {""}
+    assert sum(row["stage"] == "token_emit" for row in request_rows) == 4
