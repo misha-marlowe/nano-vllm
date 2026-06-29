@@ -527,3 +527,74 @@ Phase 5 tests validate:
 - discrete pipeline matches the explicit small-`M` event schedule;
 - increasing link latency affects single-token interactivity much more than
   steady-state throughput when CS rest remains the bottleneck.
+
+## Phase 6: Synthetic Workload Runner
+
+Phase 6 adds:
+
+```bash
+python tools/run_mock_workload.py
+```
+
+The runner generates synthetic arrivals, prompt lengths, output lengths, runs
+the mock engine, computes metrics, and writes simple SVG plots.
+
+### Workload Inputs
+
+- `--mode colocated|afd`
+- `--num-requests N`
+- `--arrival-process burst|poisson`
+- `--arrival-rate-per-s`
+- `--isl-dist fixed|lognormal`
+- `--osl-dist fixed|lognormal`
+- `--fixed-isl`
+- `--fixed-osl`
+- `--seed`
+- `--include-session-ids`
+- `--num-prefixes`
+
+AFD and KV knobs from earlier phases are also supported.
+
+### Outputs
+
+By default, outputs go under `results/mock_workload/`:
+
+- `mock_workload.csv`
+- `mock_trace.csv`
+- `mock_metrics.csv`
+- `mock_summary.csv`
+- `ttft_distribution.svg`
+- `tbt_distribution.svg`
+- `throughput_over_time.svg`
+- `kv_usage_over_time.svg`
+- `batch_size_over_time.svg`
+
+The SVG plots are generated with the Python standard library so the workload
+runner does not require pandas or matplotlib.
+
+### Examples
+
+Colocated burst:
+
+```bash
+python tools/run_mock_workload.py \
+  --mode colocated \
+  --num-requests 32 \
+  --arrival-process burst \
+  --fixed-isl 128 \
+  --fixed-osl 8
+```
+
+AFD ideal pipeline with Poisson arrivals:
+
+```bash
+python tools/run_mock_workload.py \
+  --mode afd \
+  --pipeline-mode ideal_pipeline \
+  --microbatch-size 4 \
+  --num-requests 64 \
+  --arrival-process poisson \
+  --arrival-rate-per-s 20 \
+  --isl-dist lognormal \
+  --osl-dist lognormal
+```
