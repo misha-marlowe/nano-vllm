@@ -10,6 +10,33 @@
 
 A lightweight vLLM implementation built from scratch.
 
+## Fork Summary
+
+This fork keeps the original nano-vLLM implementation and adds a CPU/Mac
+serving-simulation stack for studying scheduler behavior and AFD-style serving
+without CUDA.
+
+It includes:
+
+- **CPU mock backend**: runs nano-vLLM request lifecycle, scheduler, batching,
+  sequence state, and KV/block accounting with deterministic fake tokens.
+- **Virtual-time tracing**: emits request, prefill, decode, token, finish, and
+  KV events without using `sleep()`.
+- **AFD timing modes**: models decode as GPU attention, GPU-to-CS link, CS rest,
+  and CS-to-GPU link stages.
+- **Standalone DES harness**: explicit discrete-event simulation for attention,
+  link, CS, queueing, replicas, finite microbatch effects, and large-context
+  replay.
+- **Timing backends**: simple parametric timing plus a GPT-OSS roofline adapter
+  derived from the AC_PerfModel code.
+- **Metrics and workload tools**: trace metrics, synthetic workload generation,
+  and SVG/CSV result artifacts.
+- **Validation plots**: reproduced 8K and 1M ISL analytical-vs-DES comparison
+  plots under `results/roofline_validation/`.
+
+The original GPU inference path is still present; the mock/DES additions are
+for learning, validation, and performance-model exploration.
+
 ## Key Features
 
 * 🚀 **Fast offline inference** - Comparable inference speeds to vLLM
