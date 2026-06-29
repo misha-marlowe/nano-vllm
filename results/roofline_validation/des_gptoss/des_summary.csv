@@ -1,0 +1,9 @@
+metric,value
+num_requests,4
+output_tokens,8
+mean_tbt_ms,0.031811000000001144
+p50_tbt_ms,0.0318110000000047
+p95_tbt_ms,0.0318110000000047
+throughput_tokens_per_sec,24.115007630455644
+avg_batch_size,1
+max_kv_tokens_used,8194
