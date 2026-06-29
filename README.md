@@ -189,6 +189,49 @@ python tools/validate_roofline_backend.py \
   --output-dir results/roofline_validation
 ```
 
+### Analytical, Mock, And DES Comparisons
+
+The repository now has three timing paths:
+
+- **Analytical**: closed-form roofline / Frontier-style Pareto model.
+- **nano-vLLM mock**: the in-engine fake backend that keeps nano-vLLM request,
+  scheduler, and block-manager flow where practical.
+- **DES**: a standalone discrete-event simulator with scalar request/KV state
+  and explicit attention, link, and CS resources.
+
+DES is intentionally separate from `LLMEngine.step()`. The in-engine mock is
+best for validating nano-vLLM lifecycle behavior, while DES is best for
+resource-level AFD studies and large-context replay without materializing
+prompt token arrays.
+
+Reproduce the 8K ISL AFD comparison:
+
+```bash
+python tools/validate_afd_pareto.py \
+  --output-dir results/roofline_validation/afd_pareto_sim
+```
+
+Reproduce the 1M ISL comparison:
+
+```bash
+python tools/validate_afd_pareto.py \
+  --isl 1000000 \
+  --link-us 12 \
+  --skip-mock \
+  --output-dir results/roofline_validation/afd_pareto_1m
+```
+
+The generated artifacts are documented in
+`results/roofline_validation/README.md`.
+
+8K ISL, link=12us:
+
+![8K ISL analytical vs DES](results/roofline_validation/afd_pareto_sim/isl8192_link12_analytical_vs_des_overlay.svg)
+
+1M ISL, link=12us:
+
+![1M ISL analytical vs DES](results/roofline_validation/afd_pareto_1m/isl1000000_link12_analytical_vs_des_overlay.svg)
+
 ### What Is Real
 
 - `LLMEngine.step()` and the request lifecycle.
