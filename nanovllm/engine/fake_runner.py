@@ -5,6 +5,7 @@ from nanovllm.engine.pipeline_sim import (
     simulate_discrete_pipeline,
     split_into_microbatches,
 )
+from nanovllm.mock import DESConfig, DESEngine, DESRequest
 from nanovllm.mock.timing import build_timing_backend
 
 
@@ -199,3 +200,101 @@ class FakeAFDRunner(FakeColocatedRunner):
         if bubble_ms:
             self.last_stage_events.append(RunnerStageEvent("pipeline_drain_start", cursor, cursor))
             self.last_stage_events.append(RunnerStageEvent("pipeline_drain_end", self.last_latency_ms, self.last_latency_ms))
+
+
+class FakeDESRunner(FakeColocatedRunner):
+    """nano-vLLM runner that delegates scheduled decode batches to DESEngine.
+
+    This keeps the normal mock ``LLMEngine.step() -> Scheduler.schedule()``
+    front-end, then uses the DES resource model for decode timing and traceable
+    stage events.
+    """
+
+    def run(self, seqs: list[Sequence], is_prefill: bool) -> list[int]:
+        self.last_stage_events = []
+        if is_prefill:
+            return super().run(seqs, is_prefill)
+        rows = self._run_des_decode(seqs)
+        start_ms = self._decode_start_ms(rows)
+        end_ms = max(float(row["virtual_time_ms"]) for row in rows if row["stage"] == "token_emit")
+        self.last_latency_ms = end_ms - start_ms
+        self._record_stage_events(rows, start_ms)
+        return [self._next_token_id(seq) for seq in seqs]
+
+    def _run_des_decode(self, seqs: list[Sequence]) -> list[dict[str, str]]:
+        config = DESConfig(
+            mode=self.config.mock_mode,
+            prefill_base_ms=0.0,
+            prefill_ms_per_token=0.0,
+            decode_base_ms=self.config.decode_base_ms,
+            decode_ms_per_token=self.config.decode_ms_per_token,
+            attention_ms_base=self.config.attention_ms_base,
+            attention_ms_per_token=self.config.attention_ms_per_token,
+            attention_ms_per_isl_token=self.config.attention_ms_per_isl_token,
+            cs_rest_ms_base=self.config.cs_rest_ms_base,
+            cs_rest_ms_per_token=self.config.cs_rest_ms_per_token,
+            link_ms_one_way=self.config.link_ms_one_way,
+            attention_replicas=self.config.attention_replicas,
+            gpu_to_cs_link_resources=self.config.gpu_to_cs_link_resources,
+            cs_rest_resources=self.config.cs_rest_resources,
+            cs_to_gpu_link_resources=self.config.cs_to_gpu_link_resources,
+            mock_block_size=self.config.kvcache_block_size,
+            mock_kv_capacity_tokens=self.config.num_kvcache_blocks * self.config.kvcache_block_size,
+            mock_token_base=self.config.mock_token_base,
+            timing_backend=self.config.timing_backend,
+            roofline_gpu_arch=self.config.roofline_gpu_arch,
+            roofline_gpu_backend=self.config.roofline_gpu_backend,
+            roofline_tp_g=self.config.roofline_tp_g,
+            attention_groups=self.config.attention_groups,
+            chunk_batch=self.config.microbatch_size,
+            gpu_cs_link_us=self.config.gpu_cs_link_us,
+            des_batch_decode=True,
+            des_max_batch_size=len(seqs),
+        )
+        engine = DESEngine(config)
+        for idx, seq in enumerate(seqs):
+            engine.submit(DESRequest(request_id=idx, arrival_ms=0.0, isl=len(seq), osl=1))
+        return engine.run()
+
+    @staticmethod
+    def _decode_start_ms(rows: list[dict[str, str]]) -> float:
+        starts = [
+            float(row["virtual_time_ms"])
+            for row in rows
+            if row["stage"].endswith("_start")
+            and row.get("resource", "")
+            and row["stage"] != "prefill_start"
+        ]
+        if not starts:
+            starts = [
+                float(row["virtual_time_ms"])
+                for row in rows
+                if row["stage"] == "decode_start"
+            ]
+        return min(starts) if starts else 0.0
+
+    def _record_stage_events(self, rows: list[dict[str, str]], decode_start_ms: float):
+        seen = set()
+        for row in rows:
+            stage = row["stage"]
+            if not stage.endswith(("_start", "_end")) or stage.startswith("prefill"):
+                continue
+            dedupe_key = (
+                row.get("virtual_time_ms", ""),
+                stage,
+                row.get("resource", ""),
+                row.get("microbatch_id", ""),
+                row.get("notes", ""),
+            )
+            if dedupe_key in seen:
+                continue
+            seen.add(dedupe_key)
+            event_time = float(row["virtual_time_ms"]) - decode_start_ms
+            notes = row.get("notes", "")
+            resource = row.get("resource", "")
+            if resource:
+                notes = f"{notes};resource={resource}" if notes else f"resource={resource}"
+            microbatch = row.get("microbatch_id", "")
+            if microbatch and "microbatch=" not in notes:
+                notes = f"{notes};microbatch={microbatch}" if notes else f"microbatch={microbatch}"
+            self.last_stage_events.append(RunnerStageEvent(stage, event_time, event_time, notes))

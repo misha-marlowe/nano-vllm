@@ -689,6 +689,24 @@ python tools/run_des_workload.py \
   --output-dir results/des_gptoss
 ```
 
+The nano-vLLM engine can also use DES timing for scheduled decode batches:
+
+```bash
+python tools/run_mock_trace.py \
+  --mock-mode afd \
+  --mock-runner des \
+  --timing-backend gptoss_roofline \
+  --isl 8192 \
+  --osl 16 \
+  --num-requests 16 \
+  --trace-output traces/mock_afd_des_trace.csv
+```
+
+This path is labeled `nano-vLLM-DES` in validation plots. It preserves
+`LLMEngine.step()`, `Scheduler.schedule()`, `Sequence`, token postprocess, and
+the mock block-manager flow, while replacing decode batch latency with
+`DESEngine` resource timing.
+
 For GPU-only Pareto comparisons, add `--des-batch-decode` so DES groups ready
 decode requests into one colocated timing call with batch size `B`. Without that
 flag, DES intentionally models individual request-token jobs flowing through a
@@ -719,8 +737,8 @@ throughput-per-GPU, link-latency, and backend-selection mistakes before trying
 to interpret a full Pareto plot.
 
 `tools/validate_afd_pareto.py` takes the hybrid Section 5 analytical frontier
-points and replays each point through both the in-engine nano-vLLM mock runner
-and the standalone DES harness:
+points and replays each point through the in-engine nano-vLLM mock runner, the
+in-engine nano-vLLM-DES runner, and the standalone DES harness:
 
 ```bash
 python tools/validate_afd_pareto.py \
@@ -744,13 +762,15 @@ Outputs:
 - `afd_analytical_des_comparison.csv`
 - `afd_analytical_vs_des_replay.svg`
 - `afd_link12_analytical_vs_des_overlay.svg`
+- `isl8192_colocated_analytical_des.csv`
 - `isl8192_link12_analytical_vs_des_overlay.svg`
+- `isl1000000_colocated_analytical_des.csv`
 - `isl1000000_link12_analytical_vs_des_overlay.svg`
 
 The analytical columns are the closed-form Frontier-style Pareto model. The
-nano-vLLM mock and DES columns use finite discrete microbatch schedules with the
-same roofline stage costs, so they should match each other and can sit below the
-analytical curve when fill/drain overhead is not fully amortized.
+nano-vLLM mock, nano-vLLM-DES, and standalone DES columns use finite discrete
+microbatch schedules with the same roofline stage costs, so they can sit below
+the analytical curve when fill/drain overhead is not fully amortized.
 
 The SVG names the DES side as a replay because it only evaluates configurations
 that were selected by the analytical Pareto model. A true DES Pareto can differ

@@ -45,6 +45,7 @@ def run(args):
         "__mock__",
         mock_backend=args.mock_backend,
         mock_mode=args.mock_mode,
+        mock_runner=args.mock_runner,
         virtual_time=args.virtual_time,
         trace_output=args.trace_output,
         max_num_seqs=args.max_num_seqs,
@@ -99,6 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description="Run a CPU-only nano-vLLM mock trace.")
     parser.add_argument("--mock-backend", action="store_true", default=True)
     parser.add_argument("--mock-mode", choices=["colocated", "afd"], default="colocated")
+    parser.add_argument("--mock-runner", choices=["fake", "des"], default="fake")
     parser.add_argument("--virtual-time", action="store_true", default=True)
     parser.add_argument("--trace-output", default="traces/mock_trace.csv")
     parser.add_argument("--num-requests", type=int, default=1)

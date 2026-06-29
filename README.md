@@ -24,15 +24,16 @@ It includes:
   KV events without using `sleep()`.
 - **AFD timing modes**: models decode as GPU attention, GPU-to-CS link, CS rest,
   and CS-to-GPU link stages.
-- **Standalone DES harness**: explicit discrete-event simulation for attention,
-  link, CS, queueing, replicas, finite microbatch effects, and large-context
-  replay.
+- **DES timing paths**: a standalone discrete-event harness plus an
+  in-engine `mock_runner="des"` runner that replays each nano-vLLM scheduled
+  decode batch through DES resource timing.
 - **Timing backends**: simple parametric timing plus a GPT-OSS roofline adapter
   derived from the [original analytical model](docs/perf_model.pdf).
 - **Metrics and workload tools**: trace metrics, synthetic workload generation,
   and SVG/CSV result artifacts.
 - **Validation plots**: reproduced 8K and 1M ISL analytical / nano-vLLM mock /
-  DES comparison plots under `results/roofline_validation/`.
+  nano-vLLM-DES / standalone DES comparison plots under
+  `results/roofline_validation/`.
 
 The original GPU inference path is still present; the mock/DES additions are
 for learning, validation, and performance-model exploration.
@@ -145,6 +146,19 @@ python tools/run_mock_trace.py \
   --osl 8
 ```
 
+DES-backed nano-vLLM decode runner:
+
+```bash
+python tools/run_mock_trace.py \
+  --mock-mode afd \
+  --mock-runner des \
+  --timing-backend gptoss_roofline \
+  --trace-output traces/mock_afd_des_trace.csv \
+  --num-requests 16 \
+  --isl 8192 \
+  --osl 8
+```
+
 AFD ideal pipeline:
 
 ```bash
@@ -217,7 +231,7 @@ python tools/validate_roofline_backend.py \
   --output-dir results/roofline_validation
 ```
 
-### DES Harness
+### DES Harness And nano-vLLM-DES Runner
 
 The standalone DES harness lives in `nanovllm/mock/des_engine.py` and is run
 through `tools/run_des_workload.py`. It models serving as a discrete-event
@@ -266,12 +280,29 @@ python tools/run_des_workload.py \
   --prefill-ms-per-token 0
 ```
 
+This branch also adds an in-engine DES runner selected with
+`--mock-runner des` or `mock_runner="des"`. That path still enters through
+`LLMEngine.step()`, `Scheduler.schedule()`, nano-vLLM sequence state, and
+block/KV admission. When the scheduler returns a decode batch, the runner
+hands that scheduled batch to `DESEngine` for colocated or AFD resource timing,
+then returns deterministic fake token IDs to the normal nano-vLLM postprocess
+path.
+
+The in-engine path is labeled **nano-vLLM-DES** in plots. It is a bridge between
+the lifecycle-accurate mock and the resource-accurate standalone DES harness:
+it reuses nano-vLLM front-end scheduling, but it does not yet replace
+`LLMEngine.step()` with a global event loop or give every AFD role its own
+independent scheduler inside nano-vLLM.
+
 Current DES boundaries:
 
-- It is based on nano-vLLM serving concepts, but does not yet call
+- Standalone DES is based on nano-vLLM serving concepts, but does not call
   `LLMEngine.step()`, `Scheduler.schedule()`, or `BlockManager`.
+- nano-vLLM-DES does call the engine/scheduler/block-manager path, but DES
+  timing is scoped to each scheduled decode batch.
 - KV accounting is scalar token/block accounting, not the exact nano-vLLM block
-  table.
+  table inside standalone DES. nano-vLLM-DES keeps the real mock block-manager
+  path for admission and release.
 - The in-engine mock is still the path for validating nano-vLLM lifecycle and
   scheduler behavior.
 - DES is the path for explicit resource contention, overlap, and large-context
@@ -279,15 +310,13 @@ Current DES boundaries:
 
 Planned direct nano-vLLM integration:
 
-1. Add a DES-backed runner mode that keeps `LLMEngine.step()` and
-   `Scheduler.schedule()` as the front-end admission path.
-2. Convert each scheduled batch into DES jobs instead of immediately advancing
-   one batch-level virtual timer.
-3. Reuse nano-vLLM `Sequence` and block-manager state for admission, append,
+1. Reuse nano-vLLM `Sequence` and block-manager state for admission, append,
    preemption, and release decisions.
-4. Add role-specific queues for attention, GPU-to-CS link, CS rest, and
+2. Add role-specific queues for attention, GPU-to-CS link, CS rest, and
    CS-to-GPU link so AFD stages can batch independently.
-5. Keep the standalone DES harness as a fast reference and regression oracle
+3. Replace the batch-scoped DES bridge with a global event loop when studying
+   true cross-request overlap inside the engine.
+4. Keep the standalone DES harness as a fast reference and regression oracle
    for resource scheduling experiments.
 
 More detail lives in `docs/des_harness.md`.
@@ -299,13 +328,15 @@ The repository now has three timing paths:
 - **Analytical**: closed-form roofline / Frontier-style Pareto model.
 - **nano-vLLM mock**: the in-engine fake backend that keeps nano-vLLM request,
   scheduler, and block-manager flow where practical.
+- **nano-vLLM-DES**: the in-engine DES runner that keeps nano-vLLM scheduling
+  and block/KV paths, then times each scheduled decode batch with DES.
 - **DES**: a standalone discrete-event simulator with scalar request/KV state
   and explicit attention, link, and CS resources.
 
-DES is intentionally separate from `LLMEngine.step()`. The in-engine mock is
-best for validating nano-vLLM lifecycle behavior, while DES is best for
-resource-level AFD studies and large-context replay without materializing
-prompt token arrays.
+Standalone DES is intentionally separate from `LLMEngine.step()`. The in-engine
+mock and nano-vLLM-DES paths are best for validating nano-vLLM lifecycle
+behavior, while standalone DES is best for resource-level AFD studies and
+large-context replay without materializing prompt token arrays.
 
 Reproduce the 8K ISL AFD comparison:
 

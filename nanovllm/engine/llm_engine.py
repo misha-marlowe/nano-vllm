@@ -9,7 +9,7 @@ from nanovllm.config import Config
 from nanovllm.sampling_params import SamplingParams
 from nanovllm.engine.sequence import Sequence
 from nanovllm.engine.scheduler import Scheduler
-from nanovllm.engine.fake_runner import FakeAFDRunner, FakeColocatedRunner
+from nanovllm.engine.fake_runner import FakeAFDRunner, FakeColocatedRunner, FakeDESRunner
 from nanovllm.engine.mock_trace import MockTraceWriter, VirtualClock
 
 
@@ -37,7 +37,10 @@ class LLMEngine:
         self.clock = VirtualClock() if config.mock_backend else None
         self.trace = MockTraceWriter(config.trace_output) if config.mock_backend else None
         if config.mock_backend:
-            self.model_runner = FakeAFDRunner(config) if config.mock_mode == "afd" else FakeColocatedRunner(config)
+            if config.mock_runner == "des":
+                self.model_runner = FakeDESRunner(config)
+            else:
+                self.model_runner = FakeAFDRunner(config) if config.mock_mode == "afd" else FakeColocatedRunner(config)
             self.tokenizer = MockTokenizer()
         else:
             from nanovllm.engine.model_runner import ModelRunner

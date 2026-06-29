@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560">
 <rect width="100%" height="100%" fill="white"/>
-<text x="590" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs nano-vLLM mock vs DES replay</text>
+<text x="590" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs nano-vLLM mock vs nano-vLLM-DES vs DES replay</text>
 <line x1="72.00" y1="496.00" x2="573.00" y2="496.00" stroke="#111827"/>
 <line x1="72.00" y1="60.00" x2="72.00" y2="496.00" stroke="#111827"/>
 <text x="322.50" y="44.00" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#111827">Analytical Pareto</text>
@@ -132,6 +132,19 @@
 <rect x="1028.12" y="242.05" width="6.0" height="6.0" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
 <rect x="1097.70" y="315.07" width="6.0" height="6.0" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
 <rect x="1143.00" y="380.55" width="6.0" height="6.0" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polyline points="645.00,62.95 650.18,66.91 660.21,69.72 678.96,77.19 712.46,87.46 766.53,106.56 767.26,107.26 846.15,134.20 940.83,180.43 1031.12,245.05 1100.70,318.07 1146.00,383.55" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-dasharray="4 2 1 2"/>
+<polygon points="645.00,58.95 649.00,66.95 641.00,66.95" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="650.18,62.91 654.18,70.91 646.18,70.91" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="660.21,65.72 664.21,73.72 656.21,73.72" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="678.96,73.19 682.96,81.19 674.96,81.19" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="712.46,83.46 716.46,91.46 708.46,91.46" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="766.53,102.56 770.53,110.56 762.53,110.56" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="767.26,103.26 771.26,111.26 763.26,111.26" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="846.15,130.20 850.15,138.20 842.15,138.20" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="940.83,176.43 944.83,184.43 936.83,184.43" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="1031.12,241.05 1035.12,249.05 1027.12,249.05" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="1100.70,314.07 1104.70,322.07 1096.70,322.07" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="1146.00,379.55 1150.00,387.55 1142.00,387.55" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
 <line x1="996" y1="76" x2="1020" y2="76" stroke="#2563eb" stroke-width="2.4"/>
 <text x="1028" y="80" font-family="sans-serif" font-size="12" fill="#111827">link=4us</text>
 <line x1="996" y1="96" x2="1020" y2="96" stroke="#0f766e" stroke-width="2.4"/>
@@ -144,5 +157,5 @@
 <text x="1028" y="160" font-family="sans-serif" font-size="12" fill="#111827">link=36us</text>
 <text x="590" y="542" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>
 <text x="18" y="280" text-anchor="middle" transform="rotate(-90 18 280)" font-family="sans-serif" font-size="13">output tok/s/GPU</text>
-<text x="896" y="522" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: solid circles=DES, dashed squares=nano-vLLM mock</text>
+<text x="896" y="522" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: circles=DES, squares=mock, triangles=nano-vLLM-DES</text>
 </svg>

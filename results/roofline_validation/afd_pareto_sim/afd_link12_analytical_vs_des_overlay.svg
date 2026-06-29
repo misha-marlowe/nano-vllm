@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="560" viewBox="0 0 880 560">
 <rect width="100%" height="100%" fill="white"/>
-<text x="440" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL=8,192, link=12us: colocated + AFD analytical/mock/DES</text>
+<text x="440" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL=8,192, link=12us: colocated + AFD analytical/mock/nano-vLLM-DES/DES</text>
 <line x1="82" y1="488" x2="846" y2="488" stroke="#111827"/>
 <line x1="82" y1="58" x2="82" y2="488" stroke="#111827"/>
 <line x1="82.00" y1="488.00" x2="82.00" y2="494.00" stroke="#111827"/>
@@ -46,7 +46,8 @@
 <line x1="82.00" y1="58.00" x2="846.00" y2="58.00" stroke="#e5e7eb"/>
 <text x="72.00" y="62.00" text-anchor="end" font-family="sans-serif" font-size="11" fill="#111827">80000</text>
 <polyline points="142.79,262.81 200.26,334.00 254.58,391.44 313.10,429.18 319.72,434.65 330.75,446.67 338.45,456.31 347.01,459.14 359.71,465.59 364.10,471.00 376.51,472.39 387.63,475.96 401.03,478.67 404.56,479.63 416.05,481.55 442.42,482.87 453.61,483.33 463.86,484.42 476.49,485.24 487.94,485.49 495.98,486.09 499.38,486.56 510.92,486.69 517.24,487.00 525.06,487.33 529.94,487.49 535.98,487.66 536.27,487.74 544.39,487.83 545.31,487.87 549.52,487.91 555.30,487.96" fill="none" stroke="#111827" stroke-width="2.6"/>
-<polyline points="142.78,262.82 200.25,334.01 254.57,391.44 313.10,429.18 319.72,434.65 330.75,446.67 338.44,456.31 347.00,459.14 359.70,465.59 364.10,471.00 376.51,472.39 387.63,475.96 401.03,478.67 404.56,479.63 416.05,481.55 442.42,482.87 453.61,483.33 463.86,484.42 476.49,485.24 487.94,485.49 495.98,486.09 499.38,486.56 510.92,486.69 517.24,487.00 525.06,487.33 529.94,487.49 535.98,487.66 536.27,487.74 544.39,487.83 545.31,487.87 549.52,487.91 555.30,487.96" fill="none" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5" stroke-linecap="round"/>
+<polyline points="142.79,262.81 200.26,334.00 254.58,391.44 313.10,429.18 319.72,434.65 330.75,446.67 338.45,456.31 347.01,459.14 359.71,465.59 364.10,471.00 376.51,472.39 387.63,475.96 401.03,478.67 404.56,479.63 416.05,481.55 442.42,482.87 453.61,483.33 463.86,484.42 476.49,485.24 487.94,485.49 495.98,486.09 499.38,486.56 510.92,486.69 517.24,487.00 525.06,487.33 529.94,487.49 535.98,487.66 536.27,487.74 544.39,487.83 545.31,487.87 549.52,487.91 555.30,487.96" fill="none" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5" stroke-linecap="round"/>
+<polyline points="142.79,262.81 200.26,334.00 254.58,391.44 313.10,429.18 319.72,434.65 330.75,446.67 338.45,456.31 347.01,459.14 359.71,465.59 364.10,471.00 376.51,472.39 387.63,475.96 401.03,478.67 404.56,479.63 416.05,481.55 442.42,482.87 453.61,483.33 463.86,484.42 476.49,485.24 487.94,485.49 495.98,486.09 499.38,486.56 510.92,486.69 517.24,487.00 525.06,487.33 529.94,487.49 535.98,487.66 536.27,487.74 544.39,487.83 545.31,487.87 549.52,487.91 555.30,487.96" fill="none" stroke="#111827" stroke-width="2.6" stroke-dasharray="4 2 1 2" stroke-linecap="round"/>
 <polyline points="299.56,36.93 439.25,59.06 568.70,203.21 568.70,203.21 672.85,324.07 672.85,324.07 672.85,324.07 741.48,398.96 741.48,398.96 741.48,398.96 741.48,398.96 783.32,441.15 783.32,441.15 783.32,441.15 783.32,441.15 783.32,441.15 807.25,463.85 807.25,463.85 807.25,463.85 807.25,463.85 807.25,463.85 807.25,463.85 820.40,475.71 820.40,475.71 820.40,475.71 820.40,475.71 820.40,475.71 820.40,475.71 825.50,481.86 825.50,481.86 825.50,481.86 825.50,481.86 825.50,481.86 825.50,481.86 828.08,484.93 828.08,484.93 828.08,484.93 828.08,484.93 828.08,484.93 828.08,484.93 829.37,486.46 829.37,486.46 829.37,486.46 829.37,486.46 829.37,486.46 829.37,486.46" fill="none" stroke="#2563eb" stroke-width="2.6"/>
 <circle cx="299.56" cy="36.93" r="3.2" fill="#2563eb" fill-opacity="0.90"/>
 <circle cx="439.25" cy="59.06" r="3.2" fill="#2563eb" fill-opacity="0.90"/>
@@ -118,6 +119,18 @@
 <circle cx="825.51" cy="481.89" r="3.4" fill="#2563eb" fill-opacity="0.95"/>
 <circle cx="828.09" cy="484.95" r="3.4" fill="#2563eb" fill-opacity="0.95"/>
 <circle cx="829.37" cy="486.47" r="3.4" fill="#2563eb" fill-opacity="0.95"/>
+<polyline points="299.56,174.51 439.25,183.26 568.70,253.51 672.84,339.42 741.48,403.25 783.32,442.30 807.26,464.15 820.39,475.79 825.51,481.89 828.09,484.95 829.37,486.47" fill="none" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="4 2 1 2" stroke-linecap="round"/>
+<polygon points="299.56,170.31 303.76,178.71 295.36,178.71" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="439.25,179.06 443.45,187.46 435.05,187.46" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="568.70,249.31 572.90,257.71 564.50,257.71" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="672.84,335.22 677.04,343.62 668.64,343.62" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="741.48,399.05 745.68,407.45 737.28,407.45" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="783.32,438.10 787.52,446.50 779.12,446.50" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="807.26,459.95 811.46,468.35 803.06,468.35" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="820.39,471.59 824.59,479.99 816.19,479.99" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="825.51,477.69 829.71,486.09 821.31,486.09" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="828.09,480.75 832.29,489.15 823.89,489.15" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polygon points="829.37,482.27 833.57,490.67 825.17,490.67" fill="white" stroke="#2563eb" stroke-width="1.5"/>
 <circle cx="142.79" cy="262.81" r="3.0" fill="#111827" fill-opacity="0.85"/>
 <circle cx="200.26" cy="334.00" r="3.0" fill="#111827" fill-opacity="0.85"/>
 <circle cx="254.58" cy="391.44" r="3.0" fill="#111827" fill-opacity="0.85"/>
@@ -150,15 +163,15 @@
 <circle cx="545.31" cy="487.87" r="3.0" fill="#111827" fill-opacity="0.85"/>
 <circle cx="549.52" cy="487.91" r="3.0" fill="#111827" fill-opacity="0.85"/>
 <circle cx="555.30" cy="487.96" r="3.0" fill="#111827" fill-opacity="0.85"/>
-<circle cx="142.78" cy="262.82" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<circle cx="200.25" cy="334.01" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<circle cx="254.57" cy="391.44" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<circle cx="142.79" cy="262.81" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<circle cx="200.26" cy="334.00" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<circle cx="254.58" cy="391.44" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="313.10" cy="429.18" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="319.72" cy="434.65" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="330.75" cy="446.67" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<circle cx="338.44" cy="456.31" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<circle cx="347.00" cy="459.14" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<circle cx="359.70" cy="465.59" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<circle cx="338.45" cy="456.31" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<circle cx="347.01" cy="459.14" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<circle cx="359.71" cy="465.59" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="364.10" cy="471.00" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="376.51" cy="472.39" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="387.63" cy="475.96" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
@@ -182,6 +195,38 @@
 <circle cx="545.31" cy="487.87" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="549.52" cy="487.91" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
 <circle cx="555.30" cy="487.96" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="142.79,258.61 146.99,267.01 138.59,267.01" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="200.26,329.80 204.46,338.20 196.06,338.20" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="254.58,387.24 258.78,395.64 250.38,395.64" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="313.10,424.98 317.30,433.38 308.90,433.38" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="319.72,430.45 323.92,438.85 315.52,438.85" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="330.75,442.47 334.95,450.87 326.55,450.87" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="338.45,452.11 342.65,460.51 334.25,460.51" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="347.01,454.94 351.21,463.34 342.81,463.34" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="359.71,461.39 363.91,469.79 355.51,469.79" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="364.10,466.80 368.30,475.20 359.90,475.20" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="376.51,468.19 380.71,476.59 372.31,476.59" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="387.63,471.76 391.83,480.16 383.43,480.16" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="401.03,474.47 405.23,482.87 396.83,482.87" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="404.56,475.43 408.76,483.83 400.36,483.83" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="416.05,477.35 420.25,485.75 411.85,485.75" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="442.42,478.67 446.62,487.07 438.22,487.07" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="453.61,479.13 457.81,487.53 449.41,487.53" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="463.86,480.22 468.06,488.62 459.66,488.62" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="476.49,481.04 480.69,489.44 472.29,489.44" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="487.94,481.29 492.14,489.69 483.74,489.69" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="495.98,481.89 500.18,490.29 491.78,490.29" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="499.38,482.36 503.58,490.76 495.18,490.76" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="510.92,482.49 515.12,490.89 506.72,490.89" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="517.24,482.80 521.44,491.20 513.04,491.20" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="525.06,483.13 529.26,491.53 520.86,491.53" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="529.94,483.29 534.14,491.69 525.74,491.69" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="535.98,483.46 540.18,491.86 531.78,491.86" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="536.27,483.54 540.47,491.94 532.07,491.94" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="544.39,483.63 548.59,492.03 540.19,492.03" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="545.31,483.67 549.51,492.07 541.11,492.07" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="549.52,483.71 553.72,492.11 545.32,492.11" fill="white" stroke="#111827" stroke-width="1.5"/>
+<polygon points="555.30,483.76 559.50,492.16 551.10,492.16" fill="white" stroke="#111827" stroke-width="1.5"/>
 <line x1="592" y1="82" x2="622" y2="82" stroke="#2563eb" stroke-width="2.6"/>
 <text x="632" y="86" font-family="sans-serif" font-size="12">AFD analytical</text>
 <line x1="592" y1="104" x2="622" y2="104" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="2 5"/>
@@ -189,11 +234,17 @@
 <line x1="592" y1="126" x2="622" y2="126" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="8 4"/>
 <rect x="603" y="122" width="8" height="8" fill="white" stroke="#2563eb" stroke-width="1.5"/>
 <text x="632" y="130" font-family="sans-serif" font-size="12">AFD nano-vLLM mock</text>
-<line x1="592" y1="148" x2="622" y2="148" stroke="#111827" stroke-width="2.6"/>
-<text x="632" y="152" font-family="sans-serif" font-size="12">colocated analytical</text>
-<line x1="592" y1="170" x2="622" y2="170" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>
-<circle cx="607" cy="170" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<text x="632" y="174" font-family="sans-serif" font-size="12">colocated DES</text>
+<line x1="592" y1="148" x2="622" y2="148" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>
+<polygon points="607,143 612,152 602,152" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<text x="632" y="152" font-family="sans-serif" font-size="12">AFD nano-vLLM-DES</text>
+<line x1="592" y1="170" x2="622" y2="170" stroke="#111827" stroke-width="2.6"/>
+<text x="632" y="174" font-family="sans-serif" font-size="12">colocated analytical</text>
+<line x1="592" y1="192" x2="622" y2="192" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>
+<circle cx="607" cy="192" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<text x="632" y="196" font-family="sans-serif" font-size="12">colocated DES</text>
+<line x1="592" y1="214" x2="622" y2="214" stroke="#111827" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>
+<polygon points="607,209 612,218 602,218" fill="white" stroke="#111827" stroke-width="1.5"/>
+<text x="632" y="218" font-family="sans-serif" font-size="12">colocated nano-vLLM-DES</text>
 <text x="440" y="540" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>
 <text x="18" y="280" text-anchor="middle" transform="rotate(-90 18 280)" font-family="sans-serif" font-size="13">output tok/s/GPU</text>
 </svg>

@@ -19,6 +19,7 @@ class Config:
     num_kvcache_blocks: int = -1
     mock_backend: bool = False
     mock_mode: str = "colocated"
+    mock_runner: str = "fake"
     virtual_time: bool = False
     trace_output: str = "traces/mock_trace.csv"
     prefill_base_ms: float = 1.0
@@ -56,6 +57,7 @@ class Config:
             assert self.kvcache_block_size > 0
             assert 1 <= self.tensor_parallel_size <= 8
             assert self.mock_mode in ("colocated", "afd")
+            assert self.mock_runner in ("fake", "des")
             assert self.pipeline_mode in ("sequential", "ideal_pipeline", "discrete_pipeline")
             assert self.num_layers > 0
             assert self.microbatch_size > 0

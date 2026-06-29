@@ -55,6 +55,16 @@ def run_simple_mock(trace_path, *, mode="colocated", num_requests=1, **kwargs):
     return read_trace(trace_path)
 
 
+def run_nanovllm_des_mock(trace_path, *, mode="colocated", num_requests=1, **kwargs):
+    return run_simple_mock(
+        trace_path,
+        mode=mode,
+        num_requests=num_requests,
+        mock_runner="des",
+        **kwargs,
+    )
+
+
 def run_des(trace_path, *, mode="colocated", num_requests=1, **kwargs):
     config_kwargs = dict(
         mode=mode,
@@ -169,5 +179,43 @@ def test_des_batched_afd_emits_microbatch_resource_events(tmp_path):
     )
 
     assert any(row["stage"] == "decode_attention_start" and row["batch_size"] == "4" for row in rows)
+    assert any("microbatch=0" in row["notes"] for row in rows)
+    assert any("microbatch=1" in row["notes"] for row in rows)
+
+
+def test_nanovllm_des_runner_uses_engine_scheduler_for_colocated_batch(tmp_path):
+    rows = run_nanovllm_des_mock(
+        tmp_path / "nanovllm_des_colocated.csv",
+        mode="colocated",
+        num_requests=4,
+        prefill_base_ms=0.0,
+        prefill_ms_per_token=0.0,
+    )
+
+    resource_starts = [
+        row for row in rows
+        if row["event_scope"] == "resource" and row["stage"] == "decode_start"
+    ]
+    assert len(resource_starts) == 2
+    assert all(row["batch_size"] == "4" for row in resource_starts)
+    assert all("des_batch_decode" in row["notes"] for row in resource_starts)
+
+
+def test_nanovllm_des_runner_emits_afd_resource_events(tmp_path):
+    rows = run_nanovllm_des_mock(
+        tmp_path / "nanovllm_des_afd.csv",
+        mode="afd",
+        num_requests=4,
+        prefill_base_ms=0.0,
+        prefill_ms_per_token=0.0,
+        microbatch_size=2,
+    )
+
+    assert any(
+        row["event_scope"] == "resource"
+        and row["stage"] == "decode_attention_start"
+        and row["batch_size"] == "4"
+        for row in rows
+    )
     assert any("microbatch=0" in row["notes"] for row in rows)
     assert any("microbatch=1" in row["notes"] for row in rows)

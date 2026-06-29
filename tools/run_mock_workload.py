@@ -84,6 +84,7 @@ def run_workload(args):
         "__mock__",
         mock_backend=True,
         mock_mode=args.mode,
+        mock_runner=args.mock_runner,
         virtual_time=True,
         trace_output=str(trace_path),
         max_num_seqs=args.max_num_seqs,
@@ -241,6 +242,7 @@ def write_svg(path: Path, title: str, x_label: str, y_label: str, body: str, wid
 def main():
     parser = argparse.ArgumentParser(description="Generate and run a synthetic mock serving workload.")
     parser.add_argument("--mode", choices=["colocated", "afd"], default="colocated")
+    parser.add_argument("--mock-runner", choices=["fake", "des"], default="fake")
     parser.add_argument("--num-requests", type=int, default=16)
     parser.add_argument("--arrival-process", choices=["poisson", "burst"], default="burst")
     parser.add_argument("--arrival-rate-per-s", type=float, default=10.0)
