@@ -28,6 +28,15 @@ class Config:
     mock_token_base: int = 1000
     mock_kv_capacity_tokens: int | None = None
     mock_block_size: int | None = None
+    attention_ms_base: float = 0.4
+    attention_ms_per_token: float = 0.02
+    attention_ms_per_isl_token: float = 0.0001
+    cs_rest_ms_base: float = 0.6
+    cs_rest_ms_per_token: float = 0.03
+    link_ms_one_way: float = 0.1
+    num_layers: int = 32
+    pipeline_mode: str = "sequential"
+    microbatch_size: int = 1
 
     def __post_init__(self):
         if self.mock_backend:
@@ -35,7 +44,10 @@ class Config:
                 self.kvcache_block_size = self.mock_block_size
             assert self.kvcache_block_size > 0
             assert 1 <= self.tensor_parallel_size <= 8
-            assert self.mock_mode == "colocated", "Phase 1 only supports colocated mock mode"
+            assert self.mock_mode in ("colocated", "afd")
+            assert self.pipeline_mode in ("sequential", "ideal_pipeline", "discrete_pipeline")
+            assert self.num_layers > 0
+            assert self.microbatch_size > 0
             if self.mock_kv_capacity_tokens is not None:
                 self.num_kvcache_blocks = max(1, ceil(self.mock_kv_capacity_tokens / self.kvcache_block_size))
             elif self.num_kvcache_blocks == -1:

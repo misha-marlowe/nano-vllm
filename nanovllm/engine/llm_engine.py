@@ -9,7 +9,7 @@ from nanovllm.config import Config
 from nanovllm.sampling_params import SamplingParams
 from nanovllm.engine.sequence import Sequence
 from nanovllm.engine.scheduler import Scheduler
-from nanovllm.engine.fake_runner import FakeColocatedRunner
+from nanovllm.engine.fake_runner import FakeAFDRunner, FakeColocatedRunner
 from nanovllm.engine.mock_trace import MockTraceWriter, VirtualClock
 
 
@@ -37,7 +37,7 @@ class LLMEngine:
         self.clock = VirtualClock() if config.mock_backend else None
         self.trace = MockTraceWriter(config.trace_output) if config.mock_backend else None
         if config.mock_backend:
-            self.model_runner = FakeColocatedRunner(config)
+            self.model_runner = FakeAFDRunner(config) if config.mock_mode == "afd" else FakeColocatedRunner(config)
             self.tokenizer = MockTokenizer()
         else:
             from nanovllm.engine.model_runner import ModelRunner
@@ -76,6 +76,7 @@ class LLMEngine:
         self._trace_batch(seqs, f"{stage}_start")
         completion_counts = {seq.seq_id: seq.num_completion_tokens for seq in seqs}
         token_ids = self.model_runner.call("run", seqs, is_prefill)
+        self._trace_runner_stage_events(seqs)
         self._advance_mock_time()
         self._trace_batch(seqs, f"{stage}_end")
         self.scheduler.postprocess(seqs, token_ids, is_prefill)
@@ -190,6 +191,30 @@ class LLMEngine:
             **self._kv_block_stats(),
             notes=notes,
         )
+
+    def _trace_runner_stage_events(self, seqs: list[Sequence]):
+        if not self.trace or not self.config.mock_backend:
+            return
+        stage_events = getattr(self.model_runner, "last_stage_events", [])
+        if not stage_events:
+            return
+        batch_size = len(seqs)
+        isl = max(seq.num_prompt_tokens for seq in seqs)
+        base_time = self.clock.time_ms
+        for stage_event in stage_events:
+            event_time = base_time + stage_event.start_ms
+            for seq in seqs:
+                self.trace.emit(
+                    event_time,
+                    seq.seq_id,
+                    stage_event.stage,
+                    batch_size=batch_size,
+                    isl=isl,
+                    generated_tokens=seq.num_completion_tokens,
+                    kv_tokens_used=0 if seq.is_finished else len(seq),
+                    **self._kv_block_stats(),
+                    notes=stage_event.notes,
+                )
 
     def _trace_scheduler_events(self):
         if not self.trace:

@@ -49,6 +49,15 @@ def run(args):
         decode_ms_per_token=args.decode_ms_per_token,
         mock_kv_capacity_tokens=args.mock_kv_capacity_tokens,
         mock_block_size=args.mock_block_size,
+        attention_ms_base=args.attention_ms_base,
+        attention_ms_per_token=args.attention_ms_per_token,
+        attention_ms_per_isl_token=args.attention_ms_per_isl_token,
+        cs_rest_ms_base=args.cs_rest_ms_base,
+        cs_rest_ms_per_token=args.cs_rest_ms_per_token,
+        link_ms_one_way=args.link_ms_one_way,
+        num_layers=args.num_layers,
+        pipeline_mode=args.pipeline_mode,
+        microbatch_size=args.microbatch_size,
     )
 
     pending = list(requests)
@@ -77,7 +86,7 @@ def run(args):
 def main():
     parser = argparse.ArgumentParser(description="Run a CPU-only nano-vLLM mock trace.")
     parser.add_argument("--mock-backend", action="store_true", default=True)
-    parser.add_argument("--mock-mode", choices=["colocated"], default="colocated")
+    parser.add_argument("--mock-mode", choices=["colocated", "afd"], default="colocated")
     parser.add_argument("--virtual-time", action="store_true", default=True)
     parser.add_argument("--trace-output", default="traces/mock_trace.csv")
     parser.add_argument("--num-requests", type=int, default=1)
@@ -93,6 +102,15 @@ def main():
     parser.add_argument("--decode-ms-per-token", type=float, default=0.02)
     parser.add_argument("--mock-kv-capacity-tokens", type=int)
     parser.add_argument("--mock-block-size", type=int)
+    parser.add_argument("--attention-ms-base", type=float, default=0.4)
+    parser.add_argument("--attention-ms-per-token", type=float, default=0.02)
+    parser.add_argument("--attention-ms-per-isl-token", type=float, default=0.0001)
+    parser.add_argument("--cs-rest-ms-base", type=float, default=0.6)
+    parser.add_argument("--cs-rest-ms-per-token", type=float, default=0.03)
+    parser.add_argument("--link-ms-one-way", type=float, default=0.1)
+    parser.add_argument("--num-layers", type=int, default=32)
+    parser.add_argument("--pipeline-mode", choices=["sequential", "ideal_pipeline", "discrete_pipeline"], default="sequential")
+    parser.add_argument("--microbatch-size", type=int, default=1)
     run(parser.parse_args())
 
 

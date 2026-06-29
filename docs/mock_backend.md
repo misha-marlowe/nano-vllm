@@ -290,3 +290,150 @@ prefill = 1.0 + 128 * 0.01 = 2.28 ms
 decode = 0.5 + 0.02 = 0.52 ms
 total = 2.28 + 8 * 0.52 = 6.44 ms
 ```
+
+## Pipeline Validation Utility
+
+`nanovllm/engine/pipeline_sim.py` provides a small discrete pipeline simulator
+for validating small microbatch counts before relying on the steady-state
+formula used by the later AFD pipeline model.
+
+The steady-state formula:
+
+```text
+t_pipe = M * s_max + sum_{i != argmax} s_i / L
+```
+
+is useful for checking the ideal formula implementation, but it is optimistic
+for small `M` because fill and drain are not fully amortized. For `M=4` or
+`M=8`, use `simulate_discrete_pipeline()` as the event-level reference.
+
+### Discrete Model
+
+Each pipeline stage has one resource. Microbatch `j` can enter stage `i` only
+after:
+
+- microbatch `j` has completed stage `i - 1`; and
+- stage `i` has finished the previous microbatch.
+
+The simulator returns:
+
+- total elapsed time;
+- one event per `(microbatch, stage)` with start and end timestamps;
+- the actual microbatch size used for that event.
+
+### Variable Microbatch Sizes
+
+Stage cost is a function of microbatch size:
+
+```python
+PipelineStage("attention", lambda mb: attention_base + attention_per_token * mb)
+PipelineStage("cs_rest", lambda mb: cs_base + cs_per_token * mb)
+```
+
+`split_into_microbatches(batch_size, microbatch_size)` handles tails:
+
+```text
+split_into_microbatches(18, 8) == [8, 8, 2]
+```
+
+For non-uniform microbatches, the discrete simulator is the correctness
+reference. The uniform steady-state helper is intentionally limited to equal
+microbatch sizes.
+
+### Example
+
+```python
+from nanovllm.engine.pipeline_sim import PipelineStage, simulate_discrete_pipeline
+
+stages = [
+    PipelineStage("attention", lambda mb: 1.0),
+    PipelineStage("gpu_to_cs_link", lambda mb: 0.5),
+    PipelineStage("cs_rest", lambda mb: 2.0),
+    PipelineStage("cs_to_gpu_link", lambda mb: 0.5),
+]
+
+result = simulate_discrete_pipeline(stages, [8, 8, 8, 8])
+assert result.total_ms == 10.0
+```
+
+The matching steady-state formula with `L=32` gives `8.0625 ms`, which is lower
+because it assumes ideal cross-layer overlap and amortized bubbles.
+
+## Phase 4: AFD Fake Backend
+
+Phase 4 adds `mock_mode="afd"` with decode split into explicit AFD stages:
+
+```text
+GPU attention -> GPU-to-CS link -> CS rest -> CS-to-GPU link -> token_emit
+```
+
+Prefill still uses the colocated Phase 1 timing model. KV remains on the fake
+GPU side; the CS stage only contributes timing.
+
+### Sequential Decode Timing
+
+For `pipeline_mode="sequential"`:
+
+```text
+attention_ms = attention_ms_base
+             + attention_ms_per_token * batch_size
+             + attention_ms_per_isl_token * context_len * batch_size
+
+cs_rest_ms = cs_rest_ms_base
+           + cs_rest_ms_per_token * batch_size
+
+decode_step_ms = attention_ms
+               + link_ms_one_way
+               + cs_rest_ms
+               + link_ms_one_way
+```
+
+`context_len` is the current per-request decode context length before the new
+token is appended, so attention cost can grow across decode steps.
+
+### AFD Trace Events
+
+Sequential AFD emits:
+
+- `decode_attention_start`
+- `decode_attention_end`
+- `gpu_to_cs_link_start`
+- `gpu_to_cs_link_end`
+- `cs_rest_start`
+- `cs_rest_end`
+- `cs_to_gpu_link_start`
+- `cs_to_gpu_link_end`
+- `token_emit`
+
+The regular `decode_start` and `decode_end` rows still bracket the whole decode
+step for compatibility with Phase 3 metrics.
+
+### CLI Example
+
+```bash
+python tools/run_mock_trace.py \
+  --mock-mode afd \
+  --pipeline-mode sequential \
+  --trace-output traces/mock_afd_trace.csv \
+  --num-requests 1 \
+  --isl 128 \
+  --osl 8 \
+  --attention-ms-base 0.4 \
+  --attention-ms-per-token 0.02 \
+  --attention-ms-per-isl-token 0.0001 \
+  --cs-rest-ms-base 0.6 \
+  --cs-rest-ms-per-token 0.03 \
+  --link-ms-one-way 0.1
+```
+
+### Validation
+
+Phase 4 tests validate:
+
+- exact stage ordering for a single request;
+- two one-way link stages per decode step;
+- token timestamps matching the closed-form sequential sum;
+- colocated-equivalence when AFD stage costs are configured to sum to the
+  colocated decode latency and link latency is zero;
+- monotonic sensitivities for link latency, context length, and CS rest time;
+- KV capacity is still enforced by the fake GPU-side block manager.
