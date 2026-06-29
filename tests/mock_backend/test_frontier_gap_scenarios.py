@@ -4,6 +4,7 @@ from nanovllm.mock.frontier_gap_scenarios import (
     ParetoPoint,
     baseline_global_des,
     context_growth_global_des,
+    prefill_interference_global_des,
     timed_scenario,
 )
 
@@ -44,3 +45,12 @@ def test_context_growth_never_improves_over_constant_context():
     assert grown.tok_s_per_gpu <= baseline.tok_s_per_gpu
     assert grown.first_microbatch_ms == pytest.approx(baseline.first_microbatch_ms)
     assert "context_growth_per_batch=1" in grown.notes
+
+
+def test_prefill_interference_reduces_throughput_and_interactivity():
+    baseline = baseline_global_des(small_point(), 8, "measured")
+    interfered = prefill_interference_global_des(small_point(), 8, "measured")
+
+    assert interfered.tok_s_per_gpu < baseline.tok_s_per_gpu
+    assert interfered.interactivity < baseline.interactivity
+    assert "attention_reservation_ms" in interfered.notes

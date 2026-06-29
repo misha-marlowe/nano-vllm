@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from nanovllm.mock.des_engine import DESConfig
-from nanovllm.mock.global_pipeline import simulate_global_afd_batches
+from nanovllm.mock.global_pipeline import ResourceReservation, simulate_global_afd_batches
 
 
 @dataclass(frozen=True)
@@ -97,6 +97,39 @@ def context_growth_global_des(
         first_microbatch_ms=first_ms,
         effective_batch_ms=effective_batch_ms,
         notes=f"batches={batches};context_growth_per_batch=1",
+    )
+
+
+def prefill_interference_global_des(
+    point: ParetoPoint,
+    batches: int,
+    gpu_backend: str,
+) -> ScenarioResult:
+    """Reserve attention resources up front to model decode sharing GPU with prefill."""
+
+    base = baseline_global_des(point, batches, gpu_backend)
+    reservation = ResourceReservation(
+        stage="decode_attention",
+        start_ms=0.0,
+        duration_ms=0.10 * base.effective_batch_ms,
+    )
+    replay = simulate_global_afd_batches(
+        _base_des_config(point, gpu_backend),
+        batch_size=point.gb,
+        context_len=point.isl,
+        microbatch_size=point.ck,
+        batches=batches,
+        reservations=(reservation,),
+    )
+    first_ms = replay.first_microbatch_ms
+    effective_batch_ms = replay.total_ms / replay.batches
+    return ScenarioResult(
+        name="prefill_interference",
+        interactivity=1000.0 / (first_ms * 36),
+        tok_s_per_gpu=replay.tokens * 1000.0 / (replay.total_ms * 36 * point.tp_g),
+        first_microbatch_ms=first_ms,
+        effective_batch_ms=effective_batch_ms,
+        notes=f"batches={batches};attention_reservation_ms={reservation.duration_ms:.6f}",
     )
 
 

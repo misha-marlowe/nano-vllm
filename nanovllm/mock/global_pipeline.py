@@ -20,6 +20,14 @@ class GlobalAFDReplayResult:
     microbatches: int
 
 
+@dataclass(frozen=True)
+class ResourceReservation:
+    stage: str
+    start_ms: float
+    duration_ms: float
+    resource_id: int = 0
+
+
 def simulate_global_afd_batches(
     config: DESConfig,
     *,
@@ -28,6 +36,7 @@ def simulate_global_afd_batches(
     microbatch_size: int,
     batches: int,
     context_growth_per_batch: int = 0,
+    reservations: tuple[ResourceReservation, ...] = (),
 ) -> GlobalAFDReplayResult:
     """Replay many AFD decode batches against persistent stage resources.
 
@@ -56,6 +65,13 @@ def simulate_global_afd_batches(
     gpu_to_cs_available = [0.0] * config.gpu_to_cs_link_resources
     cs_rest_available = [0.0] * config.cs_rest_resources
     cs_to_gpu_available = [0.0] * config.cs_to_gpu_link_resources
+    _apply_reservations(
+        reservations,
+        attention_available=attention_available,
+        gpu_to_cs_available=gpu_to_cs_available,
+        cs_rest_available=cs_rest_available,
+        cs_to_gpu_available=cs_to_gpu_available,
+    )
     microbatch_sizes = split_into_microbatches(batch_size, microbatch_size)
 
     first_microbatch_ms: float | None = None
@@ -103,3 +119,27 @@ def simulate_global_afd_batches(
 
 def _earliest(available_ms: list[float]) -> int:
     return min(range(len(available_ms)), key=lambda idx: (available_ms[idx], idx))
+
+
+def _apply_reservations(
+    reservations: tuple[ResourceReservation, ...],
+    *,
+    attention_available: list[float],
+    gpu_to_cs_available: list[float],
+    cs_rest_available: list[float],
+    cs_to_gpu_available: list[float],
+):
+    pools = {
+        "decode_attention": attention_available,
+        "gpu_to_cs_link": gpu_to_cs_available,
+        "cs_rest": cs_rest_available,
+        "cs_to_gpu_link": cs_to_gpu_available,
+    }
+    for reservation in reservations:
+        pool = pools.get(reservation.stage)
+        if pool is None:
+            raise ValueError(f"unknown reservation stage {reservation.stage}")
+        if reservation.duration_ms < 0:
+            raise ValueError("reservation duration must be non-negative")
+        resource_id = reservation.resource_id % len(pool)
+        pool[resource_id] = max(pool[resource_id], reservation.start_ms + reservation.duration_ms)
