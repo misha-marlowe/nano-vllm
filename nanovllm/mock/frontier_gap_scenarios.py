@@ -141,7 +141,7 @@ def sparse_arrivals_global_des(
     """Model workload gaps by spacing ready decode batches apart."""
 
     base = baseline_global_des(point, batches, gpu_backend)
-    gap_ms = 0.25 * base.effective_batch_ms
+    gap_ms = 1.25 * base.effective_batch_ms
     replay = simulate_global_afd_batches(
         _base_des_config(point, gpu_backend),
         batch_size=point.gb,
