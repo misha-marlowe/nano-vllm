@@ -189,6 +189,81 @@ python tools/validate_roofline_backend.py \
   --output-dir results/roofline_validation
 ```
 
+### DES Harness
+
+The standalone DES harness lives in `nanovllm/mock/des_engine.py` and is run
+through `tools/run_des_workload.py`. It models serving as a discrete-event
+system instead of advancing time inside `LLMEngine.step()`.
+
+```text
+event queue -> resource queue -> completion event -> next resource
+```
+
+In AFD mode, decode work flows through explicit resources:
+
+```text
+GPU attention -> GPU-to-CS link -> CS rest -> CS-to-GPU link -> token emit
+```
+
+This makes DES useful for questions that the in-engine mock intentionally keeps
+simple: multiple attention replicas, shared links, CS queueing, finite
+microbatch effects, and large-context replay where ISL/KV are represented as
+scalar counts instead of materialized prompt token arrays.
+
+Run a DES AFD workload:
+
+```bash
+python tools/run_des_workload.py \
+  --mode afd \
+  --num-requests 16 \
+  --arrival-process burst \
+  --attention-replicas 2 \
+  --gpu-to-cs-link-resources 1 \
+  --cs-rest-resources 1 \
+  --cs-to-gpu-link-resources 1
+```
+
+Run GPU-only batched DES decode for Pareto-style comparison:
+
+```bash
+python tools/run_des_workload.py \
+  --mode colocated \
+  --des-batch-decode \
+  --des-max-batch-size 256 \
+  --timing-backend gptoss_roofline \
+  --fixed-isl 8192 \
+  --fixed-osl 8 \
+  --num-requests 256 \
+  --prefill-base-ms 0 \
+  --prefill-ms-per-token 0
+```
+
+Current DES boundaries:
+
+- It is based on nano-vLLM serving concepts, but does not yet call
+  `LLMEngine.step()`, `Scheduler.schedule()`, or `BlockManager`.
+- KV accounting is scalar token/block accounting, not the exact nano-vLLM block
+  table.
+- The in-engine mock is still the path for validating nano-vLLM lifecycle and
+  scheduler behavior.
+- DES is the path for explicit resource contention, overlap, and large-context
+  timing studies.
+
+Planned direct nano-vLLM integration:
+
+1. Add a DES-backed runner mode that keeps `LLMEngine.step()` and
+   `Scheduler.schedule()` as the front-end admission path.
+2. Convert each scheduled batch into DES jobs instead of immediately advancing
+   one batch-level virtual timer.
+3. Reuse nano-vLLM `Sequence` and block-manager state for admission, append,
+   preemption, and release decisions.
+4. Add role-specific queues for attention, GPU-to-CS link, CS rest, and
+   CS-to-GPU link so AFD stages can batch independently.
+5. Keep the standalone DES harness as a fast reference and regression oracle
+   for resource scheduling experiments.
+
+More detail lives in `docs/des_harness.md`.
+
 ### Analytical, Mock, And DES Comparisons
 
 The repository now has three timing paths:
