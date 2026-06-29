@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="560" viewBox="0 0 1180 560">
 <rect width="100%" height="100%" fill="white"/>
-<text x="590" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs nano-vLLM mock vs nano-vLLM-DES vs DES replay</text>
+<text x="590" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs mock vs nano-vLLM-DES vs global DES</text>
 <line x1="72.00" y1="496.00" x2="573.00" y2="496.00" stroke="#111827"/>
 <line x1="72.00" y1="60.00" x2="72.00" y2="496.00" stroke="#111827"/>
 <text x="322.50" y="44.00" text-anchor="middle" font-family="sans-serif" font-size="14" fill="#111827">Analytical Pareto</text>
@@ -145,6 +145,23 @@
 <polygon points="1031.12,241.05 1035.12,249.05 1027.12,249.05" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
 <polygon points="1100.70,314.07 1104.70,322.07 1096.70,322.07" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
 <polygon points="1146.00,379.55 1150.00,387.55 1142.00,387.55" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polyline points="645.00,60.19 650.18,61.45 660.06,63.96 660.21,65.62 678.13,68.89 678.88,69.72 678.96,73.84 711.51,77.70 712.46,81.04 766.53,94.72 767.26,102.05 846.15,125.09 940.83,173.94 1031.12,241.11 1100.70,316.14 1145.99,382.79" fill="none" stroke="#7c3aed" stroke-width="2.2" stroke-dasharray="10 2 2 2"/>
+<polygon points="645.00,55.99 649.20,60.19 645.00,64.39 640.80,60.19" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="650.18,57.25 654.38,61.45 650.18,65.65 645.98,61.45" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="660.06,59.76 664.26,63.96 660.06,68.16 655.86,63.96" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="660.21,61.42 664.41,65.62 660.21,69.82 656.01,65.62" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="678.13,64.69 682.33,68.89 678.13,73.09 673.93,68.89" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="678.88,65.52 683.08,69.72 678.88,73.92 674.68,69.72" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="678.96,69.64 683.16,73.84 678.96,78.04 674.76,73.84" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="711.51,73.50 715.71,77.70 711.51,81.90 707.31,77.70" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="712.46,76.84 716.66,81.04 712.46,85.24 708.26,81.04" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="766.53,90.52 770.73,94.72 766.53,98.92 762.33,94.72" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="767.26,97.85 771.46,102.05 767.26,106.25 763.06,102.05" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="846.15,120.89 850.35,125.09 846.15,129.29 841.95,125.09" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="940.83,169.74 945.03,173.94 940.83,178.14 936.63,173.94" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="1031.12,236.91 1035.32,241.11 1031.12,245.31 1026.92,241.11" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="1100.70,311.94 1104.90,316.14 1100.70,320.34 1096.50,316.14" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
+<polygon points="1145.99,378.59 1150.19,382.79 1145.99,386.99 1141.79,382.79" fill="white" stroke="#7c3aed" stroke-width="1.5"/>
 <line x1="996" y1="76" x2="1020" y2="76" stroke="#2563eb" stroke-width="2.4"/>
 <text x="1028" y="80" font-family="sans-serif" font-size="12" fill="#111827">link=4us</text>
 <line x1="996" y1="96" x2="1020" y2="96" stroke="#0f766e" stroke-width="2.4"/>
@@ -157,5 +174,5 @@
 <text x="1028" y="160" font-family="sans-serif" font-size="12" fill="#111827">link=36us</text>
 <text x="590" y="542" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>
 <text x="18" y="280" text-anchor="middle" transform="rotate(-90 18 280)" font-family="sans-serif" font-size="13">output tok/s/GPU</text>
-<text x="896" y="522" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: circles=DES, squares=mock, triangles=nano-vLLM-DES</text>
+<text x="896" y="522" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: circles=DES, squares=mock, triangles=nano-vLLM-DES, diamonds=global DES</text>
 </svg>

@@ -1,6 +1,7 @@
 import argparse
 import csv
 import sys
+import time
 from itertools import count
 from pathlib import Path
 
@@ -11,6 +12,7 @@ if str(ROOT) not in sys.path:
 from nanovllm import LLM, SamplingParams
 from nanovllm.engine.sequence import Sequence
 from nanovllm.mock import DESConfig, DESEngine, DESRequest
+from nanovllm.mock.global_pipeline import simulate_global_afd_batches
 from tools.validate_roofline_backend import frontier_rows, sweep_gpu_only
 from nanovllm.mock.timing.gptoss_roofline import pareto_uplr
 
@@ -18,6 +20,21 @@ from nanovllm.mock.timing.gptoss_roofline import pareto_uplr
 NUM_LAYERS = 36
 DEFAULT_OUTPUT_DIR = ROOT / "results/roofline_validation/afd_pareto_sim"
 DEFAULT_GPU_ONLY_CSV = ROOT / "results/roofline_validation/gpu_only_pareto_sim/gpu_only_pareto_direct_mock_des.csv"
+
+
+TIMINGS: dict[str, float] = {}
+
+
+def add_timing(name: str, elapsed_s: float):
+    TIMINGS[name] = TIMINGS.get(name, 0.0) + elapsed_s
+
+
+def timed_call(name: str, fn, *args, **kwargs):
+    start = time.perf_counter()
+    try:
+        return fn(*args, **kwargs)
+    finally:
+        add_timing(name, time.perf_counter() - start)
 
 
 def read_rows(path: Path) -> list[dict[str, str]]:
@@ -64,6 +81,8 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
             points.append((float(row["mock_interactivity"]), float(row["mock_tok_s_per_gpu"])))
         if row.get("nanovllm_des_interactivity") not in ("", None) and row.get("nanovllm_des_tok_s_per_gpu") not in ("", None):
             points.append((float(row["nanovllm_des_interactivity"]), float(row["nanovllm_des_tok_s_per_gpu"])))
+        if row.get("global_des_interactivity") not in ("", None) and row.get("global_des_tok_s_per_gpu") not in ("", None):
+            points.append((float(row["global_des_interactivity"]), float(row["global_des_tok_s_per_gpu"])))
     min_x = min(x for x, _ in points)
     max_x = max(x for x, _ in points)
     min_y = 0.0
@@ -86,7 +105,7 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
     }
     body = []
     body.append(f'<rect width="100%" height="100%" fill="white"/>')
-    body.append(f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs nano-vLLM mock vs nano-vLLM-DES vs DES replay</text>')
+    body.append(f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">AFD Section 5: analytical vs mock vs nano-vLLM-DES vs global DES</text>')
     body.append(panel_axes(left_x0, y0, panel_w, plot_h, "Analytical Pareto"))
     body.append(panel_axes(right_x0, y0, panel_w, plot_h, "DES replay of analytical configs"))
 
@@ -148,6 +167,21 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
             body.append(f'<polyline points="{nv_des_points}" fill="none" stroke="{color}" stroke-width="1.8" stroke-dasharray="4 2 1 2"/>')
             for p in nv_des_frontier:
                 body.append(open_triangle(sx(right_x0, p["x"]), sy(p["y"]), color, 4.0))
+        global_des_frontier = pareto_uplr([
+            {
+                "x": float(row["global_des_interactivity"]),
+                "y": float(row["global_des_tok_s_per_gpu"]),
+                "row": row,
+            }
+            for row in des_group
+            if row.get("global_des_interactivity") not in ("", None)
+            and row.get("global_des_tok_s_per_gpu") not in ("", None)
+        ])
+        global_des_points = " ".join(f'{sx(right_x0, p["x"]):.2f},{sy(p["y"]):.2f}' for p in global_des_frontier)
+        if global_des_points:
+            body.append(f'<polyline points="{global_des_points}" fill="none" stroke="{color}" stroke-width="2.2" stroke-dasharray="10 2 2 2"/>')
+            for p in global_des_frontier:
+                body.append(open_diamond(sx(right_x0, p["x"]), sy(p["y"]), color, 4.2))
 
     legend_x = width - 184
     for idx, link_us in enumerate(sorted(colors)):
@@ -157,7 +191,7 @@ def write_side_by_side_svg(path: Path, rows: list[dict]):
 
     body.append(f'<text x="{width / 2:.0f}" y="{height - 18}" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>')
     body.append(f'<text x="18" y="{height / 2:.0f}" text-anchor="middle" transform="rotate(-90 18 {height / 2:.0f})" font-family="sans-serif" font-size="13">output tok/s/GPU</text>')
-    body.append(f'<text x="{right_x0 + panel_w / 2:.0f}" y="{height - 38}" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: circles=DES, squares=mock, triangles=nano-vLLM-DES</text>')
+    body.append(f'<text x="{right_x0 + panel_w / 2:.0f}" y="{height - 38}" text-anchor="middle" font-family="sans-serif" font-size="11" fill="#64748b">right panel: circles=DES, squares=mock, triangles=nano-vLLM-DES, diamonds=global DES</text>')
     path.write_text(
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">\n'
         + "\n".join(body)
@@ -214,9 +248,19 @@ def write_link_overlay_svg(
         if row.get("nanovllm_des_interactivity") not in ("", None)
         and row.get("nanovllm_des_tok_s_per_gpu") not in ("", None)
     ]
+    afd_global_des_all = [
+        {
+            "x": float(row["global_des_interactivity"]),
+            "y": float(row["global_des_tok_s_per_gpu"]),
+        }
+        for row in group
+        if row.get("global_des_interactivity") not in ("", None)
+        and row.get("global_des_tok_s_per_gpu") not in ("", None)
+    ]
     afd_des_frontier = pareto_uplr(afd_des_all)
     afd_mock_frontier = pareto_uplr(afd_mock_all) if afd_mock_all else []
     afd_nanovllm_des_frontier = pareto_uplr(afd_nanovllm_des_all) if afd_nanovllm_des_all else []
+    afd_global_des_frontier = pareto_uplr(afd_global_des_all) if afd_global_des_all else []
     colocated_direct = colocated_curve(colocated_rows, "direct")
     colocated_des = colocated_curve(colocated_rows, "des")
     colocated_nanovllm_des = colocated_curve(colocated_rows, "nanovllm_des")
@@ -226,7 +270,7 @@ def write_link_overlay_svg(
     plot_w = width - pad_left - pad_right
     plot_h = height - pad_top - pad_bottom
     all_points = (
-        afd_direct + afd_des_all + afd_mock_all + afd_nanovllm_des_all
+        afd_direct + afd_des_all + afd_mock_all + afd_nanovllm_des_all + afd_global_des_all
         + colocated_direct + colocated_des + colocated_nanovllm_des
     )
     min_x = min(point["x"] for point in all_points)
@@ -252,7 +296,7 @@ def write_link_overlay_svg(
 
     body = [
         '<rect width="100%" height="100%" fill="white"/>',
-        f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL={format_int(isl)}, link={link_us:.0f}us: colocated + AFD analytical/mock/nano-vLLM-DES/DES</text>',
+        f'<text x="{width / 2:.0f}" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL={format_int(isl)}, link={link_us:.0f}us: colocated + AFD analytical/mock/DES/global DES</text>',
         f'<line x1="{pad_left}" y1="{pad_top + plot_h}" x2="{pad_left + plot_w}" y2="{pad_top + plot_h}" stroke="#111827"/>',
         f'<line x1="{pad_left}" y1="{pad_top}" x2="{pad_left}" y2="{pad_top + plot_h}" stroke="#111827"/>',
     ]
@@ -286,6 +330,10 @@ def write_link_overlay_svg(
         body.append(polyline(afd_nanovllm_des_frontier, "#2563eb", "4 2 1 2"))
         for point in afd_nanovllm_des_frontier:
             body.append(open_triangle(sx(point["x"]), sy(point["y"]), "#2563eb", 4.2))
+    if afd_global_des_frontier:
+        body.append(polyline(afd_global_des_frontier, "#16a34a", "10 2 2 2"))
+        for point in afd_global_des_frontier:
+            body.append(open_diamond(sx(point["x"]), sy(point["y"]), "#16a34a", 4.4))
     for point in colocated_direct:
         body.append(circle(sx(point["x"]), sy(point["y"]), "#111827", 3.0, 0.85))
     for point in colocated_des:
@@ -293,7 +341,7 @@ def write_link_overlay_svg(
     for point in colocated_nanovllm_des:
         body.append(open_triangle(sx(point["x"]), sy(point["y"]), "#111827", 4.2))
 
-    legend_x, legend_y = pad_left + plot_w - 254, pad_top + 24
+    legend_x, legend_y = pad_left + plot_w - 270, pad_top + 24
     body.extend([
         f'<line x1="{legend_x}" y1="{legend_y}" x2="{legend_x + 30}" y2="{legend_y}" stroke="#2563eb" stroke-width="2.6"/>',
         f'<text x="{legend_x + 40}" y="{legend_y + 4}" font-family="sans-serif" font-size="12">AFD analytical</text>',
@@ -305,14 +353,17 @@ def write_link_overlay_svg(
         f'<line x1="{legend_x}" y1="{legend_y + 66}" x2="{legend_x + 30}" y2="{legend_y + 66}" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>',
         f'<polygon points="{legend_x + 15},{legend_y + 61} {legend_x + 20},{legend_y + 70} {legend_x + 10},{legend_y + 70}" fill="white" stroke="#2563eb" stroke-width="1.5"/>',
         f'<text x="{legend_x + 40}" y="{legend_y + 70}" font-family="sans-serif" font-size="12">AFD nano-vLLM-DES</text>',
-        f'<line x1="{legend_x}" y1="{legend_y + 88}" x2="{legend_x + 30}" y2="{legend_y + 88}" stroke="#111827" stroke-width="2.6"/>',
-        f'<text x="{legend_x + 40}" y="{legend_y + 92}" font-family="sans-serif" font-size="12">colocated analytical</text>',
-        f'<line x1="{legend_x}" y1="{legend_y + 110}" x2="{legend_x + 30}" y2="{legend_y + 110}" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>',
-        f'<circle cx="{legend_x + 15}" cy="{legend_y + 110}" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>',
-        f'<text x="{legend_x + 40}" y="{legend_y + 114}" font-family="sans-serif" font-size="12">colocated DES</text>',
-        f'<line x1="{legend_x}" y1="{legend_y + 132}" x2="{legend_x + 30}" y2="{legend_y + 132}" stroke="#111827" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>',
-        f'<polygon points="{legend_x + 15},{legend_y + 127} {legend_x + 20},{legend_y + 136} {legend_x + 10},{legend_y + 136}" fill="white" stroke="#111827" stroke-width="1.5"/>',
-        f'<text x="{legend_x + 40}" y="{legend_y + 136}" font-family="sans-serif" font-size="12">colocated nano-vLLM-DES</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 88}" x2="{legend_x + 30}" y2="{legend_y + 88}" stroke="#16a34a" stroke-width="2.6" stroke-dasharray="10 2 2 2"/>',
+        f'<polygon points="{legend_x + 15},{legend_y + 83} {legend_x + 20},{legend_y + 88} {legend_x + 15},{legend_y + 93} {legend_x + 10},{legend_y + 88}" fill="white" stroke="#16a34a" stroke-width="1.5"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 92}" font-family="sans-serif" font-size="12">AFD global DES</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 110}" x2="{legend_x + 30}" y2="{legend_y + 110}" stroke="#111827" stroke-width="2.6"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 114}" font-family="sans-serif" font-size="12">colocated analytical</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 132}" x2="{legend_x + 30}" y2="{legend_y + 132}" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>',
+        f'<circle cx="{legend_x + 15}" cy="{legend_y + 132}" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 136}" font-family="sans-serif" font-size="12">colocated DES</text>',
+        f'<line x1="{legend_x}" y1="{legend_y + 154}" x2="{legend_x + 30}" y2="{legend_y + 154}" stroke="#111827" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>',
+        f'<polygon points="{legend_x + 15},{legend_y + 149} {legend_x + 20},{legend_y + 158} {legend_x + 10},{legend_y + 158}" fill="white" stroke="#111827" stroke-width="1.5"/>',
+        f'<text x="{legend_x + 40}" y="{legend_y + 158}" font-family="sans-serif" font-size="12">colocated nano-vLLM-DES</text>',
         f'<text x="{width / 2:.0f}" y="{height - 20}" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>',
         f'<text x="18" y="{height / 2:.0f}" text-anchor="middle" transform="rotate(-90 18 {height / 2:.0f})" font-family="sans-serif" font-size="13">output tok/s/GPU</text>',
     ])
@@ -506,6 +557,14 @@ def open_triangle(x: float, y: float, color: str, r: float) -> str:
     )
 
 
+def open_diamond(x: float, y: float, color: str, r: float) -> str:
+    return (
+        f'<polygon points="{x:.2f},{y - r:.2f} {x + r:.2f},{y:.2f} '
+        f'{x:.2f},{y + r:.2f} {x - r:.2f},{y:.2f}" fill="white" '
+        f'stroke="{color}" stroke-width="1.5"/>'
+    )
+
+
 def fmt(value, digits: int) -> str:
     return f"{float(value):.{digits}f}"
 
@@ -641,6 +700,38 @@ def run_des_point(point: dict, args) -> tuple[float, float, float]:
     return normalize(first_ms, total_ms, gb, int(point["tp_g"]))
 
 
+def run_global_des_point(point: dict, args) -> tuple[float, float, float]:
+    gb = int(point["gb"])
+    tp_g = int(point["tp_g"])
+    config = DESConfig(
+        mode="afd",
+        prefill_base_ms=0.0,
+        prefill_ms_per_token=0.0,
+        attention_replicas=int(point["a_g"]),
+        gpu_to_cs_link_resources=1,
+        cs_rest_resources=1,
+        cs_to_gpu_link_resources=1,
+        timing_backend="gptoss_roofline",
+        roofline_gpu_backend=args.gpu_backend,
+        roofline_tp_g=tp_g,
+        gpu_cs_link_us=float(point["link_us"]),
+        chunk_batch=int(point["ck"]),
+        des_batch_decode=True,
+        des_max_batch_size=gb,
+    )
+    replay = simulate_global_afd_batches(
+        config,
+        batch_size=gb,
+        context_len=int(args.isl),
+        microbatch_size=int(point["ck"]),
+        batches=args.global_des_batches,
+    )
+    interactivity = 1000.0 / (replay.first_microbatch_ms * NUM_LAYERS)
+    tok_s_per_gpu = replay.tokens * 1000.0 / (replay.total_ms * NUM_LAYERS * tp_g)
+    effective_batch_block_ms = replay.total_ms / replay.batches
+    return interactivity, tok_s_per_gpu, effective_batch_block_ms
+
+
 def trace_decode_times(rows: list[dict[str, str]]) -> tuple[float, float]:
     resource_rows = [row for row in rows if is_resource_row(row)]
     first_end = [
@@ -686,15 +777,16 @@ def compare_rows(points: list[dict], args) -> list[dict]:
             f"ck={point['ck']} gb={point['gb']} s={point['s']}",
             flush=True,
         )
-        des_x, des_y, des_block_ms = run_des_point(point, args)
+        des_x, des_y, des_block_ms = timed_call("standalone_des", run_des_point, point, args)
         if args.skip_mock:
             mock_x = mock_y = mock_block_ms = ""
             mock_x_err = mock_y_err = ""
         else:
-            mock_x, mock_y, mock_block_ms = run_mock_point(point, args)
+            mock_x, mock_y, mock_block_ms = timed_call("nanovllm_mock", run_mock_point, point, args)
             mock_x_err = (mock_x - float(point["interactivity"])) / float(point["interactivity"])
             mock_y_err = (mock_y - float(point["tok_s_per_gpu"])) / float(point["tok_s_per_gpu"])
-        nv_des_x, nv_des_y, nv_des_block_ms = run_nanovllm_des_point(point, args)
+        nv_des_x, nv_des_y, nv_des_block_ms = timed_call("nanovllm_des", run_nanovllm_des_point, point, args)
+        global_des_x, global_des_y, global_des_block_ms = timed_call("global_des", run_global_des_point, point, args)
         direct_x = float(point["interactivity"])
         direct_y = float(point["tok_s_per_gpu"])
         rows.append({
@@ -714,12 +806,18 @@ def compare_rows(points: list[dict], args) -> list[dict]:
             "nanovllm_des_tok_s_per_gpu": nv_des_y,
             "nanovllm_des_x_err": (nv_des_x - direct_x) / direct_x,
             "nanovllm_des_y_err": (nv_des_y - direct_y) / direct_y,
+            "global_des_interactivity": global_des_x,
+            "global_des_tok_s_per_gpu": global_des_y,
+            "global_des_x_err": (global_des_x - direct_x) / direct_x,
+            "global_des_y_err": (global_des_y - direct_y) / direct_y,
             "des_interactivity": des_x,
             "des_tok_s_per_gpu": des_y,
             "des_x_err": (des_x - direct_x) / direct_x,
             "des_y_err": (des_y - direct_y) / direct_y,
             "mock_layer_block_ms": mock_block_ms,
             "nanovllm_des_layer_block_ms": nv_des_block_ms,
+            "global_des_effective_batch_block_ms": global_des_block_ms,
+            "global_des_replay_batches": args.global_des_batches,
             "des_layer_block_ms": des_block_ms,
         })
     return rows
@@ -727,26 +825,60 @@ def compare_rows(points: list[dict], args) -> list[dict]:
 
 def print_summary(rows: list[dict]):
     print("\nSummary by link")
-    print("| link_us | points | max |mock y err| | max |nano-vLLM-DES y err| | max |DES y err| | mean mock y err | mean nano-vLLM-DES y err | mean DES y err |")
-    print("|---:|---:|---:|---:|---:|---:|---:|---:|")
+    print("| link_us | points | max |mock y err| | max |nano-vLLM-DES y err| | max |global DES y err| | max |DES y err| | mean mock y err | mean nano-vLLM-DES y err | mean global DES y err | mean DES y err |")
+    print("|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for link_us in sorted({row["link_us"] for row in rows}):
         group = [row for row in rows if row["link_us"] == link_us]
         mock_errs = [float(row["mock_y_err"]) for row in group if row["mock_y_err"] != ""]
         nv_des_errs = [float(row["nanovllm_des_y_err"]) for row in group if row["nanovllm_des_y_err"] != ""]
-        des_errs = [row["des_y_err"] for row in group]
+        global_des_errs = [float(row["global_des_y_err"]) for row in group if row.get("global_des_y_err") not in ("", None)]
+        des_errs = [float(row["des_y_err"]) for row in group]
         max_mock = f"{max(abs(err) for err in mock_errs) * 100:.2f}%" if mock_errs else "n/a"
         mean_mock = f"{sum(mock_errs) / len(mock_errs) * 100:.2f}%" if mock_errs else "n/a"
         max_nv_des = f"{max(abs(err) for err in nv_des_errs) * 100:.2f}%" if nv_des_errs else "n/a"
         mean_nv_des = f"{sum(nv_des_errs) / len(nv_des_errs) * 100:.2f}%" if nv_des_errs else "n/a"
+        max_global_des = f"{max(abs(err) for err in global_des_errs) * 100:.2f}%" if global_des_errs else "n/a"
+        mean_global_des = f"{sum(global_des_errs) / len(global_des_errs) * 100:.2f}%" if global_des_errs else "n/a"
         print(
             f"| {link_us:.0f} | {len(group)} | "
             f"{max_mock} | "
             f"{max_nv_des} | "
+            f"{max_global_des} | "
             f"{max(abs(err) for err in des_errs) * 100:.2f}% | "
             f"{mean_mock} | "
             f"{mean_nv_des} | "
+            f"{mean_global_des} | "
             f"{sum(des_errs) / len(des_errs) * 100:.2f}% |"
         )
+
+
+def write_timing_report(path: Path, rows: list[dict]):
+    points = len(rows)
+    timing_rows = []
+    for name in [
+        "direct_analytical",
+        "nanovllm_mock",
+        "nanovllm_des",
+        "standalone_des",
+        "global_des",
+        "colocated_plot_inputs",
+        "plot_and_csv_write",
+    ]:
+        seconds = TIMINGS.get(name, 0.0)
+        timing_rows.append({
+            "approach": name,
+            "seconds": seconds,
+            "points": points,
+            "seconds_per_point": seconds / points if points else "",
+        })
+    write_csv(path, timing_rows)
+    print("\nGeneration timing")
+    print("| approach | seconds | seconds/point |")
+    print("|---|---:|---:|")
+    for row in timing_rows:
+        spp = row["seconds_per_point"]
+        spp_text = f"{spp:.4f}" if isinstance(spp, float) else "n/a"
+        print(f"| {row['approach']} | {row['seconds']:.3f} | {spp_text} |")
 
 
 def main():
@@ -759,6 +891,7 @@ def main():
     parser.add_argument("--overlay-link-us", type=float, default=12.0)
     parser.add_argument("--gpu-only-csv", type=Path, default=DEFAULT_GPU_ONLY_CSV)
     parser.add_argument("--skip-mock", action="store_true", help="Replay only DES against direct points; useful for very large ISL.")
+    parser.add_argument("--global-des-batches", type=int, default=16, help="Number of back-to-back AFD batches for saturated global DES replay.")
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -771,7 +904,7 @@ def main():
             for row in read_rows(args.from_csv)
         ]
     else:
-        points = load_direct_hybrid_points(args)
+        points = timed_call("direct_analytical", load_direct_hybrid_points, args)
         rows = compare_rows(points, args)
     csv_path = args.output_dir / "afd_analytical_des_comparison.csv"
     svg_path = args.output_dir / "afd_analytical_vs_des_replay.svg"
@@ -781,17 +914,22 @@ def main():
     if args.gpu_only_csv.exists() and args.isl == 8192:
         colocated_rows = read_rows(args.gpu_only_csv)
     if not any(row.get("case") == "nanovllm_des" for row in colocated_rows):
-        colocated_rows = build_colocated_rows(args)
+        colocated_rows = timed_call("colocated_plot_inputs", build_colocated_rows, args)
         write_csv(args.output_dir / f"{isl_tag(args.isl)}_colocated_analytical_des.csv", colocated_rows)
+    plot_start = time.perf_counter()
     write_csv(csv_path, rows)
     write_side_by_side_svg(svg_path, rows)
     write_link_overlay_svg(overlay_svg_path, rows, args.overlay_link_us, args.isl, colocated_rows)
     if args.isl == 8192:
         write_link_overlay_svg(legacy_overlay_svg_path, rows, args.overlay_link_us, args.isl, colocated_rows)
+    add_timing("plot_and_csv_write", time.perf_counter() - plot_start)
+    timing_path = args.output_dir / "pareto_generation_timing.csv"
+    write_timing_report(timing_path, rows)
     print_summary(rows)
     print(f"\nWROTE {csv_path}")
     print(f"WROTE {svg_path}")
     print(f"WROTE {overlay_svg_path}")
+    print(f"WROTE {timing_path}")
     if args.isl == 8192:
         print(f"WROTE {legacy_overlay_svg_path}")
 

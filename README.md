@@ -294,6 +294,12 @@ it reuses nano-vLLM front-end scheduling, but it does not yet replace
 `LLMEngine.step()` with a global event loop or give every AFD role its own
 independent scheduler inside nano-vLLM.
 
+The validation tooling also includes a **global DES replay** path in
+`nanovllm/mock/global_pipeline.py`. It replays several back-to-back AFD decode
+batches against persistent attention/link/CS resources, so cross-batch
+pipeline fill/drain is amortized. This is not yet wired into `LLMEngine`, but
+it is useful as a fast approximation of saturated global AFD pipeline behavior.
+
 Current DES boundaries:
 
 - Standalone DES is based on nano-vLLM serving concepts, but does not call
@@ -332,6 +338,8 @@ The repository now has three timing paths:
   and block/KV paths, then times each scheduled decode batch with DES.
 - **DES**: a standalone discrete-event simulator with scalar request/KV state
   and explicit attention, link, and CS resources.
+- **global DES replay**: saturated AFD replay across multiple back-to-back
+  batches with persistent stage resources; plotted as **AFD global DES**.
 
 Standalone DES is intentionally separate from `LLMEngine.step()`. The in-engine
 mock and nano-vLLM-DES paths are best for validating nano-vLLM lifecycle
@@ -353,6 +361,9 @@ python tools/validate_afd_pareto.py \
   --link-us 12 \
   --output-dir results/roofline_validation/afd_pareto_1m
 ```
+
+By default the validator uses `--global-des-batches 16` for the saturated
+global DES replay and writes `pareto_generation_timing.csv` next to each plot.
 
 The generated artifacts are documented in
 `results/roofline_validation/README.md`.

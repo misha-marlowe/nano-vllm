@@ -5,6 +5,9 @@ The repository has two DES paths:
 - `tools/run_des_workload.py` runs the standalone DES harness directly.
 - `--mock-runner des` runs nano-vLLM through `LLMEngine.step()` and delegates
   each scheduled decode batch to the same DES timing engine.
+- `nanovllm/mock/global_pipeline.py` provides saturated global AFD replay for
+  Pareto validation. It replays several ready batches through persistent
+  attention, link, and CS resources to approximate cross-batch pipeline overlap.
 
 The simple mock remains centered on:
 
@@ -35,6 +38,8 @@ LLMEngine.step()
 ```
 
 Both DES paths are additive: they do not replace the simple fake runner.
+The global replay helper is also additive and is currently used by
+`tools/validate_afd_pareto.py`; it is not yet an `LLMEngine` control loop.
 
 ## Entry Point
 
@@ -82,6 +87,9 @@ python tools/run_des_workload.py \
   ready decode requests into one `colocated_decode_ms(B, context)` timing call.
 - The in-engine nano-vLLM-DES runner uses the same batch-decode model for the
   decode batch selected by `Scheduler.schedule()`.
+- Global AFD replay keeps stage resources persistent across multiple ready
+  batches, which amortizes fill/drain bubbles and models saturated cross-batch
+  overlap more closely than the batch-scoped runner.
 
 ## Comparison Against Simple Mock
 
@@ -99,6 +107,9 @@ Expected gaps:
   AFD latency.
 - nano-vLLM-DES batches at the nano-vLLM scheduler boundary and then runs DES
   timing inside that boundary.
+- Global AFD replay can improve throughput relative to nano-vLLM-DES when the
+  workload has enough ready batches to keep attention/link/CS resources fed.
+  It is optimistic because all replay batches are available at time zero.
 - The DES harness models each request as work flowing through explicit resources,
   so shared CS/link resources can queue and increase tail latency.
 - In colocated mode, DES uses one-token resource jobs by default. Enable
@@ -114,6 +125,8 @@ where the DES harness exposes resource contention.
   to one scheduled decode batch at a time.
 - Standalone DES KV accounting is token/block-level, not the exact nano-vLLM
   block table.
+- Global AFD replay is timing-only. It does not run nano-vLLM request admission,
+  token postprocess, or KV/block allocation; use nano-vLLM-DES tests for those.
 - `--des-batch-decode` is a compact batching model for colocated decode, not a
   full copy of `Scheduler.schedule()`. Independent per-role batch schedulers can
   be added next.
@@ -152,3 +165,5 @@ The comparison tests verify:
 - More attention replicas improve an attention-bottleneck DES workload.
 - nano-vLLM-DES emits DES resource events while preserving nano-vLLM scheduler
   and token postprocess flow.
+- Global AFD replay equals batched DES for one replay batch and improves
+  throughput for CS-heavy multi-batch replay by amortizing pipeline fill/drain.

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="560" viewBox="0 0 880 560">
 <rect width="100%" height="100%" fill="white"/>
-<text x="440" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL=1,000,000, link=12us: colocated + AFD analytical/mock/nano-vLLM-DES/DES</text>
+<text x="440" y="28" text-anchor="middle" font-family="sans-serif" font-size="18">ISL=1,000,000, link=12us: colocated + AFD analytical/mock/DES/global DES</text>
 <line x1="82" y1="488" x2="846" y2="488" stroke="#111827"/>
 <line x1="82" y1="58" x2="82" y2="488" stroke="#111827"/>
 <line x1="82.00" y1="488.00" x2="82.00" y2="494.00" stroke="#111827"/>
@@ -137,6 +137,23 @@
 <polygon points="709.94,231.58 714.14,239.98 705.74,239.98" fill="white" stroke="#2563eb" stroke-width="1.5"/>
 <polygon points="821.54,304.97 825.74,313.37 817.34,313.37" fill="white" stroke="#2563eb" stroke-width="1.5"/>
 <polygon points="894.21,370.78 898.41,379.18 890.01,379.18" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<polyline points="90.57,49.98 98.88,51.25 114.73,53.77 114.98,55.44 143.71,58.73 144.92,59.56 145.04,63.70 197.26,67.58 198.78,70.94 285.52,84.69 286.68,92.06 413.23,115.21 565.10,164.31 709.94,231.82 821.55,307.23 894.20,374.22" fill="none" stroke="#16a34a" stroke-width="2.6" stroke-dasharray="10 2 2 2" stroke-linecap="round"/>
+<polygon points="90.57,45.58 94.97,49.98 90.57,54.38 86.17,49.98" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="98.88,46.85 103.28,51.25 98.88,55.65 94.48,51.25" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="114.73,49.37 119.13,53.77 114.73,58.17 110.33,53.77" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="114.98,51.04 119.38,55.44 114.98,59.84 110.58,55.44" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="143.71,54.33 148.11,58.73 143.71,63.13 139.31,58.73" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="144.92,55.16 149.32,59.56 144.92,63.96 140.52,59.56" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="145.04,59.30 149.44,63.70 145.04,68.10 140.64,63.70" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="197.26,63.18 201.66,67.58 197.26,71.98 192.86,67.58" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="198.78,66.54 203.18,70.94 198.78,75.34 194.38,70.94" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="285.52,80.29 289.92,84.69 285.52,89.09 281.12,84.69" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="286.68,87.66 291.08,92.06 286.68,96.46 282.28,92.06" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="413.23,110.81 417.63,115.21 413.23,119.61 408.83,115.21" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="565.10,159.91 569.50,164.31 565.10,168.71 560.70,164.31" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="709.94,227.42 714.34,231.82 709.94,236.22 705.54,231.82" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="821.55,302.83 825.95,307.23 821.55,311.63 817.15,307.23" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<polygon points="894.20,369.82 898.60,374.22 894.20,378.62 889.80,374.22" fill="white" stroke="#16a34a" stroke-width="1.5"/>
 <circle cx="86.30" cy="54.47" r="3.0" fill="#111827" fill-opacity="0.85"/>
 <circle cx="90.50" cy="59.24" r="3.0" fill="#111827" fill-opacity="0.85"/>
 <circle cx="98.66" cy="67.94" r="3.0" fill="#111827" fill-opacity="0.85"/>
@@ -218,24 +235,27 @@
 <polygon points="650.53,474.47 654.73,482.87 646.33,482.87" fill="white" stroke="#111827" stroke-width="1.5"/>
 <polygon points="654.34,477.54 658.54,485.94 650.14,485.94" fill="white" stroke="#111827" stroke-width="1.5"/>
 <polygon points="659.56,480.64 663.76,489.04 655.36,489.04" fill="white" stroke="#111827" stroke-width="1.5"/>
-<line x1="592" y1="82" x2="622" y2="82" stroke="#2563eb" stroke-width="2.6"/>
-<text x="632" y="86" font-family="sans-serif" font-size="12">AFD analytical</text>
-<line x1="592" y1="104" x2="622" y2="104" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="2 5"/>
-<text x="632" y="108" font-family="sans-serif" font-size="12">AFD DES</text>
-<line x1="592" y1="126" x2="622" y2="126" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="8 4"/>
-<rect x="603" y="122" width="8" height="8" fill="white" stroke="#2563eb" stroke-width="1.5"/>
-<text x="632" y="130" font-family="sans-serif" font-size="12">AFD nano-vLLM mock</text>
-<line x1="592" y1="148" x2="622" y2="148" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>
-<polygon points="607,143 612,152 602,152" fill="white" stroke="#2563eb" stroke-width="1.5"/>
-<text x="632" y="152" font-family="sans-serif" font-size="12">AFD nano-vLLM-DES</text>
-<line x1="592" y1="170" x2="622" y2="170" stroke="#111827" stroke-width="2.6"/>
-<text x="632" y="174" font-family="sans-serif" font-size="12">colocated analytical</text>
-<line x1="592" y1="192" x2="622" y2="192" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>
-<circle cx="607" cy="192" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
-<text x="632" y="196" font-family="sans-serif" font-size="12">colocated DES</text>
-<line x1="592" y1="214" x2="622" y2="214" stroke="#111827" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>
-<polygon points="607,209 612,218 602,218" fill="white" stroke="#111827" stroke-width="1.5"/>
-<text x="632" y="218" font-family="sans-serif" font-size="12">colocated nano-vLLM-DES</text>
+<line x1="576" y1="82" x2="606" y2="82" stroke="#2563eb" stroke-width="2.6"/>
+<text x="616" y="86" font-family="sans-serif" font-size="12">AFD analytical</text>
+<line x1="576" y1="104" x2="606" y2="104" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="2 5"/>
+<text x="616" y="108" font-family="sans-serif" font-size="12">AFD DES</text>
+<line x1="576" y1="126" x2="606" y2="126" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="8 4"/>
+<rect x="587" y="122" width="8" height="8" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<text x="616" y="130" font-family="sans-serif" font-size="12">AFD nano-vLLM mock</text>
+<line x1="576" y1="148" x2="606" y2="148" stroke="#2563eb" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>
+<polygon points="591,143 596,152 586,152" fill="white" stroke="#2563eb" stroke-width="1.5"/>
+<text x="616" y="152" font-family="sans-serif" font-size="12">AFD nano-vLLM-DES</text>
+<line x1="576" y1="170" x2="606" y2="170" stroke="#16a34a" stroke-width="2.6" stroke-dasharray="10 2 2 2"/>
+<polygon points="591,165 596,170 591,175 586,170" fill="white" stroke="#16a34a" stroke-width="1.5"/>
+<text x="616" y="174" font-family="sans-serif" font-size="12">AFD global DES</text>
+<line x1="576" y1="192" x2="606" y2="192" stroke="#111827" stroke-width="2.6"/>
+<text x="616" y="196" font-family="sans-serif" font-size="12">colocated analytical</text>
+<line x1="576" y1="214" x2="606" y2="214" stroke="#111827" stroke-width="2.6" stroke-dasharray="2 5"/>
+<circle cx="591" cy="214" r="4.1" fill="white" stroke="#111827" stroke-width="1.5"/>
+<text x="616" y="218" font-family="sans-serif" font-size="12">colocated DES</text>
+<line x1="576" y1="236" x2="606" y2="236" stroke="#111827" stroke-width="2.6" stroke-dasharray="4 2 1 2"/>
+<polygon points="591,231 596,240 586,240" fill="white" stroke="#111827" stroke-width="1.5"/>
+<text x="616" y="240" font-family="sans-serif" font-size="12">colocated nano-vLLM-DES</text>
 <text x="440" y="540" text-anchor="middle" font-family="sans-serif" font-size="13">interactivity (tok/s/user)</text>
 <text x="18" y="280" text-anchor="middle" transform="rotate(-90 18 280)" font-family="sans-serif" font-size="13">output tok/s/GPU</text>
 </svg>

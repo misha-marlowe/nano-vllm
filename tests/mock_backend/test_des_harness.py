@@ -6,6 +6,7 @@ import pytest
 from nanovllm import LLM, SamplingParams
 from nanovllm.engine.sequence import Sequence
 from nanovllm.mock import DESConfig, DESEngine, DESRequest
+from nanovllm.mock.global_pipeline import simulate_global_afd_batches
 
 
 def reset_sequence_ids():
@@ -23,6 +24,16 @@ def finish_time(rows, request_id=0):
         for row in rows
         if row["request_id"] == str(request_id) and row["stage"] == "request_finish"
     ))
+
+
+def decode_span(rows):
+    starts = [
+        float(row["virtual_time_ms"])
+        for row in rows
+        if row["stage"].endswith("_start") and row.get("resource", "")
+    ]
+    token_times = [float(row["virtual_time_ms"]) for row in rows if row["stage"] == "token_emit"]
+    return max(token_times) - min(starts)
 
 
 def run_simple_mock(trace_path, *, mode="colocated", num_requests=1, **kwargs):
@@ -65,7 +76,7 @@ def run_nanovllm_des_mock(trace_path, *, mode="colocated", num_requests=1, **kwa
     )
 
 
-def run_des(trace_path, *, mode="colocated", num_requests=1, **kwargs):
+def run_des(trace_path, *, mode="colocated", num_requests=1, osl=2, **kwargs):
     config_kwargs = dict(
         mode=mode,
         trace_output=str(trace_path),
@@ -84,7 +95,7 @@ def run_des(trace_path, *, mode="colocated", num_requests=1, **kwargs):
     config = DESConfig(**config_kwargs)
     engine = DESEngine(config)
     for idx in range(num_requests):
-        engine.submit(DESRequest(idx, 0.0, 16, 2))
+        engine.submit(DESRequest(idx, 0.0, 16, osl))
     engine.run()
     return read_trace(trace_path)
 
@@ -171,6 +182,7 @@ def test_des_batched_afd_emits_microbatch_resource_events(tmp_path):
         tmp_path / "afd_batch.csv",
         mode="afd",
         num_requests=4,
+        osl=1,
         des_batch_decode=True,
         des_max_batch_size=4,
         chunk_batch=2,
@@ -219,3 +231,68 @@ def test_nanovllm_des_runner_emits_afd_resource_events(tmp_path):
     )
     assert any("microbatch=0" in row["notes"] for row in rows)
     assert any("microbatch=1" in row["notes"] for row in rows)
+
+
+def test_global_afd_replay_matches_batched_des_for_one_batch(tmp_path):
+    rows = run_des(
+        tmp_path / "afd_batch.csv",
+        mode="afd",
+        num_requests=4,
+        osl=1,
+        des_batch_decode=True,
+        des_max_batch_size=4,
+        chunk_batch=2,
+        prefill_base_ms=0.0,
+        prefill_ms_per_token=0.0,
+    )
+    config = DESConfig(
+        mode="afd",
+        prefill_base_ms=0.0,
+        prefill_ms_per_token=0.0,
+        chunk_batch=2,
+        des_batch_decode=True,
+        des_max_batch_size=4,
+    )
+    replay = simulate_global_afd_batches(
+        config,
+        batch_size=4,
+        context_len=16,
+        microbatch_size=2,
+        batches=1,
+    )
+
+    assert replay.total_ms == pytest.approx(decode_span(rows))
+    assert replay.tokens == 4
+    assert replay.microbatches == 2
+
+
+def test_global_afd_replay_amortizes_fill_drain_across_batches():
+    config = DESConfig(
+        mode="afd",
+        attention_ms_base=0.0,
+        attention_ms_per_token=0.5,
+        attention_ms_per_isl_token=0.0,
+        cs_rest_ms_base=0.0,
+        cs_rest_ms_per_token=10.0,
+        link_ms_one_way=0.0,
+        chunk_batch=2,
+        des_batch_decode=True,
+    )
+    one = simulate_global_afd_batches(
+        config,
+        batch_size=4,
+        context_len=16,
+        microbatch_size=2,
+        batches=1,
+    )
+    many = simulate_global_afd_batches(
+        config,
+        batch_size=4,
+        context_len=16,
+        microbatch_size=2,
+        batches=4,
+    )
+
+    isolated_total = one.total_ms * many.batches
+    assert many.total_ms < isolated_total
+    assert many.tokens / many.total_ms > one.tokens / one.total_ms
