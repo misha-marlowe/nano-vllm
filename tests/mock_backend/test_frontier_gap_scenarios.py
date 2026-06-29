@@ -3,8 +3,15 @@ import pytest
 from nanovllm.mock.frontier_gap_scenarios import (
     ParetoPoint,
     baseline_global_des,
+    collective_contention_global_des,
     context_growth_global_des,
+    kv_transfer_global_des,
+    operator_overheads_global_des,
     prefill_interference_global_des,
+    replica_imbalance_global_des,
+    roofline_backend_global_des,
+    runtime_optimizations_global_des,
+    sparse_arrivals_global_des,
     timed_scenario,
 )
 
@@ -54,3 +61,36 @@ def test_prefill_interference_reduces_throughput_and_interactivity():
     assert interfered.tok_s_per_gpu < baseline.tok_s_per_gpu
     assert interfered.interactivity < baseline.interactivity
     assert "attention_reservation_ms" in interfered.notes
+
+
+@pytest.mark.parametrize(
+    "scenario",
+    [
+        sparse_arrivals_global_des,
+        operator_overheads_global_des,
+        collective_contention_global_des,
+        replica_imbalance_global_des,
+        kv_transfer_global_des,
+    ],
+)
+def test_degradation_scenarios_do_not_improve_throughput(scenario):
+    baseline = baseline_global_des(small_point(), 8, "measured")
+    result = scenario(small_point(), 8, "measured")
+
+    assert result.tok_s_per_gpu <= baseline.tok_s_per_gpu
+
+
+def test_runtime_optimization_scenario_improves_throughput():
+    baseline = baseline_global_des(small_point(), 8, "measured")
+    optimized = runtime_optimizations_global_des(small_point(), 8, "measured")
+
+    assert optimized.tok_s_per_gpu >= baseline.tok_s_per_gpu
+    assert optimized.interactivity >= baseline.interactivity
+
+
+def test_roofline_backend_scenario_runs_and_is_named():
+    result = roofline_backend_global_des(small_point(), 4, "measured")
+
+    assert result.name == "roofline_backend"
+    assert result.tok_s_per_gpu > 0
+    assert "gpu_backend=roofline" in result.notes

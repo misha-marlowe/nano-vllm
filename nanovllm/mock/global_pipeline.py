@@ -37,6 +37,9 @@ def simulate_global_afd_batches(
     batches: int,
     context_growth_per_batch: int = 0,
     reservations: tuple[ResourceReservation, ...] = (),
+    stage_scales: dict[str, float] | None = None,
+    stage_add_ms: dict[str, float] | None = None,
+    inter_batch_gap_ms: float = 0.0,
 ) -> GlobalAFDReplayResult:
     """Replay many AFD decode batches against persistent stage resources.
 
@@ -59,8 +62,18 @@ def simulate_global_afd_batches(
         raise ValueError("batches must be positive")
     if context_growth_per_batch < 0:
         raise ValueError("context_growth_per_batch must be non-negative")
+    if inter_batch_gap_ms < 0:
+        raise ValueError("inter_batch_gap_ms must be non-negative")
 
     timing = build_timing_backend(config)
+    stage_scales = stage_scales or {}
+    stage_add_ms = stage_add_ms or {}
+    for stage, scale in stage_scales.items():
+        if scale < 0:
+            raise ValueError(f"stage scale for {stage} must be non-negative")
+    for stage, add_ms in stage_add_ms.items():
+        if add_ms < 0:
+            raise ValueError(f"stage additive time for {stage} must be non-negative")
     attention_available = [0.0] * config.attention_replicas
     gpu_to_cs_available = [0.0] * config.gpu_to_cs_link_resources
     cs_rest_available = [0.0] * config.cs_rest_resources
@@ -80,27 +93,28 @@ def simulate_global_afd_batches(
 
     for batch_id in range(batches):
         batch_context_len = context_len + batch_id * context_growth_per_batch
+        batch_ready_ms = batch_id * inter_batch_gap_ms
         for microbatch_id, size in enumerate(microbatch_sizes):
             timings = timing.afd_decode_stages_ms(size, batch_context_len)
 
             attn_resource = microbatch_id % len(attention_available)
-            attn_start = attention_available[attn_resource]
-            attn_end = attn_start + timings.attention_ms
+            attn_start = max(batch_ready_ms, attention_available[attn_resource])
+            attn_end = attn_start + _duration("decode_attention", timings.attention_ms, stage_scales, stage_add_ms)
             attention_available[attn_resource] = attn_end
 
             out_link_resource = _earliest(gpu_to_cs_available)
             out_start = max(attn_end, gpu_to_cs_available[out_link_resource])
-            out_end = out_start + timings.gpu_to_cs_link_ms
+            out_end = out_start + _duration("gpu_to_cs_link", timings.gpu_to_cs_link_ms, stage_scales, stage_add_ms)
             gpu_to_cs_available[out_link_resource] = out_end
 
             cs_resource = _earliest(cs_rest_available)
             cs_start = max(out_end, cs_rest_available[cs_resource])
-            cs_end = cs_start + timings.cs_rest_ms
+            cs_end = cs_start + _duration("cs_rest", timings.cs_rest_ms, stage_scales, stage_add_ms)
             cs_rest_available[cs_resource] = cs_end
 
             ret_link_resource = _earliest(cs_to_gpu_available)
             ret_start = max(cs_end, cs_to_gpu_available[ret_link_resource])
-            ret_end = ret_start + timings.cs_to_gpu_link_ms
+            ret_end = ret_start + _duration("cs_to_gpu_link", timings.cs_to_gpu_link_ms, stage_scales, stage_add_ms)
             cs_to_gpu_available[ret_link_resource] = ret_end
 
             if first_microbatch_ms is None:
@@ -119,6 +133,10 @@ def simulate_global_afd_batches(
 
 def _earliest(available_ms: list[float]) -> int:
     return min(range(len(available_ms)), key=lambda idx: (available_ms[idx], idx))
+
+
+def _duration(stage: str, base_ms: float, scales: dict[str, float], adds: dict[str, float]) -> float:
+    return base_ms * scales.get(stage, 1.0) + adds.get(stage, 0.0)
 
 
 def _apply_reservations(
