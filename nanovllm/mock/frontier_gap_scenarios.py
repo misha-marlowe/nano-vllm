@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
+from typing import Callable
 
 from nanovllm.mock.des_engine import DESConfig
 from nanovllm.mock.global_pipeline import simulate_global_afd_batches
@@ -23,14 +25,32 @@ class ScenarioResult:
     tok_s_per_gpu: float
     first_microbatch_ms: float
     effective_batch_ms: float
+    wall_time_s: float = 0.0
     notes: str = ""
+
+
+ScenarioFn = Callable[[ParetoPoint, int, str], ScenarioResult]
+
+
+def timed_scenario(fn: ScenarioFn, point: ParetoPoint, *, batches: int, gpu_backend: str = "measured") -> ScenarioResult:
+    start = time.perf_counter()
+    result = fn(point, batches, gpu_backend)
+    elapsed = time.perf_counter() - start
+    return ScenarioResult(
+        name=result.name,
+        interactivity=result.interactivity,
+        tok_s_per_gpu=result.tok_s_per_gpu,
+        first_microbatch_ms=result.first_microbatch_ms,
+        effective_batch_ms=result.effective_batch_ms,
+        wall_time_s=elapsed,
+        notes=result.notes,
+    )
 
 
 def baseline_global_des(
     point: ParetoPoint,
-    *,
     batches: int,
-    gpu_backend: str = "measured",
+    gpu_backend: str,
 ) -> ScenarioResult:
     """Evaluate the saturated global AFD replay baseline."""
 
