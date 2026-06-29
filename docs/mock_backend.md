@@ -437,3 +437,93 @@ Phase 4 tests validate:
   colocated decode latency and link latency is zero;
 - monotonic sensitivities for link latency, context length, and CS rest time;
 - KV capacity is still enforced by the fake GPU-side block manager.
+
+## Phase 5: Pipeline Mode
+
+Phase 5 adds two pipeline timing modes for AFD decode:
+
+- `pipeline_mode="ideal_pipeline"`
+  - Uses the steady-state cross-layer formula for multi-microbatch batches.
+  - Preserves full round-trip latency for a single microbatch.
+- `pipeline_mode="discrete_pipeline"`
+  - Uses the event-level simulator from `pipeline_sim.py`.
+  - Intended as the correctness reference for small `M`, such as 4 or 8
+    microbatches.
+
+### Microbatching
+
+The decode batch is split with:
+
+```text
+split_into_microbatches(batch_size, microbatch_size)
+```
+
+Examples:
+
+```text
+batch_size=4, microbatch_size=1 -> [1, 1, 1, 1]
+batch_size=18, microbatch_size=8 -> [8, 8, 2]
+```
+
+Stage costs are evaluated against each actual microbatch size.
+
+### Ideal Pipeline Formula
+
+For uniform or non-uniform microbatches, the implementation computes:
+
+```text
+steady_state_ms = sum_j max_i s_i[j]
+bubble_ms = sum_{i != bottleneck} max_j s_i[j] / L
+t_ideal = steady_state_ms + bubble_ms
+```
+
+For one microbatch, ideal mode intentionally falls back to the full sequential
+round trip:
+
+```text
+t_one_microbatch = attention + link + cs_rest + link
+```
+
+This keeps interactivity honest while still allowing throughput improvement for
+larger batches.
+
+### Discrete Pipeline Reference
+
+`pipeline_mode="discrete_pipeline"` schedules every `(microbatch, stage)` event
+on single-resource stages. This is the stricter small-`M` model and is expected
+to be greater than or equal to the ideal formula.
+
+For stages:
+
+```text
+attention = 1.0 ms
+gpu_to_cs_link = 0.5 ms
+cs_rest = 2.0 ms
+cs_to_gpu_link = 0.5 ms
+M = 4
+```
+
+The discrete model gives:
+
+```text
+first microbatch round trip = 4.0 ms
+remaining bottleneck CS work = 3 * 2.0 ms
+total = 10.0 ms
+```
+
+The ideal formula with `L=32` gives:
+
+```text
+4 * 2.0 + (1.0 + 0.5 + 0.5) / 32 = 8.0625 ms
+```
+
+### Validation
+
+Phase 5 tests validate:
+
+- sequential timing equals the direct stage sum;
+- ideal pipeline does not reduce single-microbatch round-trip latency;
+- ideal pipeline improves multi-microbatch decode time;
+- discrete pipeline matches the explicit small-`M` event schedule;
+- increasing link latency affects single-token interactivity much more than
+  steady-state throughput when CS rest remains the bottleneck.

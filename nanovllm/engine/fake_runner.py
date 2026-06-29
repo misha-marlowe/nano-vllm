@@ -137,6 +137,24 @@ class FakeAFDRunner(FakeColocatedRunner):
             [stage.cost_ms(size) for stage in stage_defs]
             for size in microbatch_sizes
         ]
+        if len(microbatch_sizes) == 1:
+            cursor = 0.0
+            for stage, duration in zip(stage_defs, per_mb_costs[0]):
+                self.last_stage_events.append(RunnerStageEvent(
+                    f"{stage.name}_start",
+                    cursor,
+                    cursor,
+                    "mode=ideal_pipeline;single_microbatch_round_trip",
+                ))
+                cursor += duration
+                self.last_stage_events.append(RunnerStageEvent(
+                    f"{stage.name}_end",
+                    cursor,
+                    cursor,
+                    "mode=ideal_pipeline;single_microbatch_round_trip",
+                ))
+            self.last_latency_ms = cursor
+            return
         bottleneck_ms = sum(max(costs) for costs in per_mb_costs)
         max_stage_costs = [
             max(costs[stage_idx] for costs in per_mb_costs)
