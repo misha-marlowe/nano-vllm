@@ -1,6 +1,11 @@
 import pytest
 
-from nanovllm.mock.frontier_gap_scenarios import ParetoPoint, baseline_global_des, timed_scenario
+from nanovllm.mock.frontier_gap_scenarios import (
+    ParetoPoint,
+    baseline_global_des,
+    context_growth_global_des,
+    timed_scenario,
+)
 
 
 def small_point() -> ParetoPoint:
@@ -30,3 +35,12 @@ def test_timed_scenario_records_wall_time():
 
     assert result.wall_time_s >= 0
     assert result.tok_s_per_gpu > 0
+
+
+def test_context_growth_never_improves_over_constant_context():
+    baseline = baseline_global_des(small_point(), 8, "measured")
+    grown = context_growth_global_des(small_point(), 8, "measured")
+
+    assert grown.tok_s_per_gpu <= baseline.tok_s_per_gpu
+    assert grown.first_microbatch_ms == pytest.approx(baseline.first_microbatch_ms)
+    assert "context_growth_per_batch=1" in grown.notes

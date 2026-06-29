@@ -73,6 +73,33 @@ def baseline_global_des(
     )
 
 
+def context_growth_global_des(
+    point: ParetoPoint,
+    batches: int,
+    gpu_backend: str,
+) -> ScenarioResult:
+    """Replay decode batches with KV context growing by one token per step."""
+
+    replay = simulate_global_afd_batches(
+        _base_des_config(point, gpu_backend),
+        batch_size=point.gb,
+        context_len=point.isl,
+        microbatch_size=point.ck,
+        batches=batches,
+        context_growth_per_batch=1,
+    )
+    first_ms = replay.first_microbatch_ms
+    effective_batch_ms = replay.total_ms / replay.batches
+    return ScenarioResult(
+        name="context_growth",
+        interactivity=1000.0 / (first_ms * 36),
+        tok_s_per_gpu=replay.tokens * 1000.0 / (replay.total_ms * 36 * point.tp_g),
+        first_microbatch_ms=first_ms,
+        effective_batch_ms=effective_batch_ms,
+        notes=f"batches={batches};context_growth_per_batch=1",
+    )
+
+
 def _base_des_config(point: ParetoPoint, gpu_backend: str) -> DESConfig:
     return DESConfig(
         mode="afd",

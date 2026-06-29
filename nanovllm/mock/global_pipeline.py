@@ -27,6 +27,7 @@ def simulate_global_afd_batches(
     context_len: int,
     microbatch_size: int,
     batches: int,
+    context_growth_per_batch: int = 0,
 ) -> GlobalAFDReplayResult:
     """Replay many AFD decode batches against persistent stage resources.
 
@@ -47,6 +48,8 @@ def simulate_global_afd_batches(
         raise ValueError("microbatch_size must be positive")
     if batches <= 0:
         raise ValueError("batches must be positive")
+    if context_growth_per_batch < 0:
+        raise ValueError("context_growth_per_batch must be non-negative")
 
     timing = build_timing_backend(config)
     attention_available = [0.0] * config.attention_replicas
@@ -59,9 +62,10 @@ def simulate_global_afd_batches(
     total_ms = 0.0
     microbatch_count = 0
 
-    for _batch_id in range(batches):
+    for batch_id in range(batches):
+        batch_context_len = context_len + batch_id * context_growth_per_batch
         for microbatch_id, size in enumerate(microbatch_sizes):
-            timings = timing.afd_decode_stages_ms(size, context_len)
+            timings = timing.afd_decode_stages_ms(size, batch_context_len)
 
             attn_resource = microbatch_id % len(attention_available)
             attn_start = attention_available[attn_resource]
